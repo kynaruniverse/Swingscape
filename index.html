@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pancake Plop! 🥞</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="pixi-container"></div>
+        <div id="ui-overlay">
+            <h1>🥞 Pancake Plop!</h1>
+            <button id="startButton">Start Level</button>
+            <p id="message"></p>
+        </div>
+        <div id="hud">
+            <div id="flip-counter">Flips: 0</div>
+            <div id="level-indicator">Level 1</div>
+        </div>
+    </div>
+    
+    <!-- Matter.js Physics Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <!-- PixiJS -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+    
+    <!-- Game Scripts (in order of dependency) -->
+    <script src="js/config.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/pancake.js"></script>
+    <script src="js/obstacles.js"></script>
+    <script src="js/environment.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
