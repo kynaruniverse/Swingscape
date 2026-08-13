@@ -1,111 +1,500 @@
-// Physics Engine Setup - Better Contact Detection
+// ============================================================
+// PANCAKE PLOP! — PHYSICS ENGINE
+// Deterministic fixed-timestep Matter.js simulation
+// ============================================================
+
 const Physics = {
+
+    // --------------------------------------------------------
+    // MATTER REFERENCES
+    // --------------------------------------------------------
+
     engine: null,
     world: null,
+
+    // --------------------------------------------------------
+    // COLLISION STATE
+    // --------------------------------------------------------
+
     contactPairs: new Set(),
-    
+
+    // --------------------------------------------------------
+    // INITIALISE
+    // --------------------------------------------------------
+
     init() {
-        const { Engine, World, Events } = Matter;
-        
+
+        const {
+            Engine
+        } = Matter;
+
         this.engine = Engine.create({
-            gravity: { x: 0, y: 0.6 },
             enableSleeping: false
         });
-        
-        this.world = this.engine.world;
-        
-        // Set up collision events
+
+        /*
+         * Gravity is owned by CONFIG so there is only one
+         * authoritative physics configuration.
+         */
+        this.engine.gravity.x =
+            CONFIG.physics.gravity.x;
+
+        this.engine.gravity.y =
+            CONFIG.physics.gravity.y;
+
+        this.world =
+            this.engine.world;
+
+        this.contactPairs.clear();
+
         this.setupCollisionEvents();
-        
-        console.log('Physics initialized');
+
+        console.log(
+            'Physics initialized:',
+            `${CONFIG.physics.fixedDeltaMilliseconds.toFixed(2)}ms fixed timestep`
+        );
     },
-    
+
+    // --------------------------------------------------------
+    // COLLISION EVENTS
+    // --------------------------------------------------------
+
     setupCollisionEvents() {
-        const { Events } = Matter;
-        
-        // Track active contacts
-        Events.on(this.engine, 'collisionStart', (event) => {
-            event.pairs.forEach(pair => {
-                const { bodyA, bodyB } = pair;
-                
-                // Track contact
-                const contactKey = bodyA.id + '-' + bodyB.id;
-                this.contactPairs.add(contactKey);
-                
-                // Check if pancake is involved
-                if (Pancake.isPancake(bodyA) || Pancake.isPancake(bodyB)) {
-                    const pancakeBody = Pancake.isPancake(bodyA) ? bodyA : bodyB;
-                    const otherBody = pancakeBody === bodyA ? bodyB : bodyA;
-                    
-                    Pancake.handleCollision(otherBody);
-                }
-            });
-        });
-        
-        Events.on(this.engine, 'collisionEnd', (event) => {
-            event.pairs.forEach(pair => {
-                const { bodyA, bodyB } = pair;
-                
-                // Remove contact tracking
-                const contactKey = bodyA.id + '-' + bodyB.id;
-                this.contactPairs.delete(contactKey);
-                
-                // Update pancake contact count
-                if (Pancake.isPancake(bodyA) || Pancake.isPancake(bodyB)) {
-                    const otherBody = Pancake.isPancake(bodyA) ? bodyB : bodyA;
-                    if (['counter', 'griddle', 'plate', 'butter'].includes(otherBody.label)) {
-                        Pancake.contactCount = Math.max(0, Pancake.contactCount - 1);
-                        
-                        // If no more contacts, pancake is in air
-                        if (Pancake.contactCount === 0) {
-                            Pancake.isResting = false;
-                        }
+
+        const {
+            Events
+        } = Matter;
+
+        /*
+         * Collision start.
+         *
+         * This is the moment two bodies begin touching.
+         */
+        Events.on(
+            this.engine,
+            'collisionStart',
+            event => {
+
+                event.pairs.forEach(pair => {
+
+                    const bodyA =
+                        pair.bodyA;
+
+                    const bodyB =
+                        pair.bodyB;
+
+                    const contactKey =
+                        this.getContactKey(
+                            bodyA,
+                            bodyB
+                        );
+
+                    this.contactPairs.add(
+                        contactKey
+                    );
+
+                    /*
+                     * Forward pancake collisions to the
+                     * pancake gameplay system.
+                     */
+                    const pancakeBody =
+                        this.getPancakeBody(
+                            bodyA,
+                            bodyB
+                        );
+
+                    if (!pancakeBody) {
+                        return;
                     }
-                }
-            });
-        });
-        
-        Events.on(this.engine, 'beforeUpdate', () => {
-            // Apply custom physics
-            if (Pancake.body && Pancake.isInAir()) {
-                // Apply air friction for floaty feel
-                const velocity = Pancake.body.velocity;
-                const friction = 1 - CONFIG.airFriction;
-                
-                Matter.Body.setVelocity(Pancake.body, {
-                    x: velocity.x * friction,
-                    y: velocity.y
+
+                    const otherBody =
+                        pancakeBody === bodyA
+                            ? bodyB
+                            : bodyA;
+
+                    /*
+                     * Let Pancake manage its own grounded
+                     * state and contact surface tracking.
+                     */
+                    if (
+                        typeof Pancake !== 'undefined' &&
+                        typeof Pancake.beginContact === 'function'
+                    ) {
+
+                        Pancake.beginContact(
+                            otherBody
+                        );
+                    }
+
+                    /*
+                     * Optional gameplay hook.
+                     */
+                    if (
+                        typeof Pancake !== 'undefined' &&
+                        typeof Pancake.handleCollision === 'function'
+                    ) {
+
+                        Pancake.handleCollision(
+                            otherBody
+                        );
+                    }
                 });
             }
-        });
+        );
+
+        /*
+         * Collision end.
+         *
+         * Remove the contact from the active contact pairs
+         * and let Pancake update its grounded state.
+         */
+        Events.on(
+            this.engine,
+            'collisionEnd',
+            event => {
+
+                event.pairs.forEach(pair => {
+
+                    const bodyA =
+                        pair.bodyA;
+
+                    const bodyB =
+                        pair.bodyB;
+
+                    const contactKey =
+                        this.getContactKey(
+                            bodyA,
+                            bodyB
+                        );
+
+                    this.contactPairs.delete(
+                        contactKey
+                    );
+
+                    const pancakeBody =
+                        this.getPancakeBody(
+                            bodyA,
+                            bodyB
+                        );
+
+                    if (!pancakeBody) {
+                        return;
+                    }
+
+                    const otherBody =
+                        pancakeBody === bodyA
+                            ? bodyB
+                            : bodyA;
+
+                    if (
+                        typeof Pancake !== 'undefined' &&
+                        typeof Pancake.endContact === 'function'
+                    ) {
+
+                        Pancake.endContact(
+                            otherBody
+                        );
+                    }
+                });
+            }
+        );
     },
-    
+
+    // --------------------------------------------------------
+    // FIXED-STEP UPDATE
+    // --------------------------------------------------------
+
     update() {
-        if (Game.state === 'playing') {
-            Matter.Engine.update(this.engine, 1000 / 60);
+
+        if (!this.engine) {
+            return;
         }
+
+        /*
+         * Physics always advances by exactly one fixed step.
+         *
+         * Game.fixedUpdate() is responsible for calling this
+         * at the deterministic 60 Hz interval.
+         */
+        this.step();
     },
-    
-    createBody(x, y, width, height, options) {
-        return Matter.Bodies.rectangle(x, y, width, height, options);
+
+    // --------------------------------------------------------
+    // SINGLE DETERMINISTIC PHYSICS STEP
+    // --------------------------------------------------------
+
+    step() {
+
+        if (!this.engine) {
+            return;
+        }
+
+        /*
+         * Air resistance is applied once per deterministic
+         * simulation step.
+         */
+        this.applyAirResistance();
+
+        Matter.Engine.update(
+            this.engine,
+            CONFIG.physics.fixedDeltaMilliseconds
+        );
     },
-    
-    createCircle(x, y, radius, options) {
-        return Matter.Bodies.circle(x, y, radius, options);
+
+    // --------------------------------------------------------
+    // AIR RESISTANCE
+    // --------------------------------------------------------
+
+    applyAirResistance() {
+
+        if (
+            typeof Pancake === 'undefined' ||
+            !Pancake.body
+        ) {
+            return;
+        }
+
+        if (
+            typeof Pancake.isInAir !== 'function' ||
+            !Pancake.isInAir()
+        ) {
+            return;
+        }
+
+        const body =
+            Pancake.body;
+
+        const airFriction =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    CONFIG.physics.airFriction
+                )
+            );
+
+        if (airFriction === 0) {
+            return;
+        }
+
+        const velocity =
+            body.velocity;
+
+        const damping =
+            1 - airFriction;
+
+        Matter.Body.setVelocity(
+            body,
+            {
+                x:
+                    velocity.x *
+                    damping,
+
+                y:
+                    velocity.y *
+                    damping
+            }
+        );
     },
-    
+
+    // --------------------------------------------------------
+    // COLLISION HELPERS
+    // --------------------------------------------------------
+
+    getContactKey(bodyA, bodyB) {
+
+        const first =
+            Math.min(
+                bodyA.id,
+                bodyB.id
+            );
+
+        const second =
+            Math.max(
+                bodyA.id,
+                bodyB.id
+            );
+
+        return `${first}-${second}`;
+    },
+
+    getPancakeBody(bodyA, bodyB) {
+
+        if (
+            typeof Pancake === 'undefined' ||
+            typeof Pancake.isPancake !== 'function'
+        ) {
+            return null;
+        }
+
+        if (
+            Pancake.isPancake(bodyA)
+        ) {
+            return bodyA;
+        }
+
+        if (
+            Pancake.isPancake(bodyB)
+        ) {
+            return bodyB;
+        }
+
+        return null;
+    },
+
+    isPancakeContactSurface(body) {
+
+        return [
+            'counter',
+            'griddle',
+            'plate',
+            'butter'
+        ].includes(
+            body.label
+        );
+    },
+
+    // --------------------------------------------------------
+    // BODY CREATION
+    // --------------------------------------------------------
+
+    createBody(
+        x,
+        y,
+        width,
+        height,
+        options = {}
+    ) {
+
+        return Matter.Bodies.rectangle(
+            x,
+            y,
+            width,
+            height,
+            options
+        );
+    },
+
+    createCircle(
+        x,
+        y,
+        radius,
+        options = {}
+    ) {
+
+        return Matter.Bodies.circle(
+            x,
+            y,
+            radius,
+            options
+        );
+    },
+
+    // --------------------------------------------------------
+    // WORLD MANAGEMENT
+    // --------------------------------------------------------
+
     addBody(body) {
-        Matter.World.add(this.world, body);
+
+        if (
+            !this.world ||
+            !body
+        ) {
+            return;
+        }
+
+        Matter.World.add(
+            this.world,
+            body
+        );
     },
-    
+
     removeBody(body) {
-        Matter.World.remove(this.world, body);
+
+        if (
+            !this.world ||
+            !body
+        ) {
+            return;
+        }
+
+        Matter.World.remove(
+            this.world,
+            body
+        );
+
+        /*
+         * Remove any stale contact pairs associated
+         * with this body.
+         */
+        this.removeBodyContacts(
+            body
+        );
     },
-    
+
+    removeBodyContacts(body) {
+
+        if (!body) {
+            return;
+        }
+
+        const bodyId =
+            body.id;
+
+        /*
+         * Remove any pair involving this body.
+         */
+        for (
+            const contactKey of this.contactPairs
+        ) {
+
+            if (
+                contactKey.startsWith(
+                    `${bodyId}-`
+                ) ||
+                contactKey.endsWith(
+                    `-${bodyId}`
+                )
+            ) {
+
+                this.contactPairs.delete(
+                    contactKey
+                );
+            }
+        }
+
+        /*
+         * Pancake state is not directly reset here.
+         *
+         * Game.reset() will rebuild Pancake and clear its
+         * contact surfaces via Pancake.init().
+         */
+    },
+
+    // --------------------------------------------------------
+    // CLEAR WORLD
+    // --------------------------------------------------------
+
     clearWorld() {
-        Matter.World.clear(this.world);
-        Matter.Engine.clear(this.engine);
+
+        if (!this.engine) {
+            return;
+        }
+
+        Matter.World.clear(
+            this.world,
+            false
+        );
+
+        Matter.Engine.clear(
+            this.engine
+        );
+
         this.contactPairs.clear();
+
+        /*
+         * Pancake contact state is rebuilt by Pancake.init().
+         */
     }
 };
 

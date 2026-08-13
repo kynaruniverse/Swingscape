@@ -1,20 +1,68 @@
-// Main Game Controller
+// ============================================================
+// PANCAKE PLOP! — MAIN GAME CONTROLLER
 //
-// Coordinates the physics, rendering, environment, pancake,
-// particles, input and DOM UI systems.
+// Architecture:
+//
+// Input
+//   ↓
+// Game State
+//   ↓
+// Fixed Physics Step
+//   ↓
+// Matter.js
+//   ↓
+// Gameplay State
+//   ↓
+// Pixi Rendering
+//   ↓
+// HTML UI
+//
+// The simulation runs at a deterministic 60 Hz.
+// Rendering remains independent of the physics timestep.
+// ============================================================
 
 const Game = {
-    state: 'menu',
 
-    chargeIndicator: null,
+    // --------------------------------------------------------
+    // STATE
+    // --------------------------------------------------------
+
+    state: 'menu',
 
     initialized: false,
 
+    // --------------------------------------------------------
+    // FIXED TIMESTEP
+    // --------------------------------------------------------
+
+    FIXED_STEP: CONFIG.physics.fixedDeltaMilliseconds,
+
+    accumulator: 0,
+
+    lastFrameTime: 0,
+
+    maxFrameDelta: CONFIG.physics.maxFrameDelta * 1000,
+
+    maxPhysicsStepsPerFrame: CONFIG.physics.maxPhysicsStepsPerFrame,
+
+    // --------------------------------------------------------
+    // TIMERS
+    // --------------------------------------------------------
+
+    resultTimer: null,
+
+    // --------------------------------------------------------
+    // INITIALISE
+    // --------------------------------------------------------
+
     init() {
+
         if (this.initialized) {
+
             console.warn(
                 'Game.init() called more than once.'
             );
+
             return;
         }
 
@@ -23,76 +71,113 @@ const Game = {
         );
 
         /*
-         * Single source of truth for game dimensions.
+         * CONFIG is the single source of truth
+         * for the logical game dimensions.
+         *
+         * Do not mutate it here.
          */
-        CONFIG.canvasWidth = 420;
-        CONFIG.canvasHeight = 750;
 
-        /*
-         * Rendering first.
-         */
+        // ----------------------------------------------------
+        // RENDERING
+        // ----------------------------------------------------
+
         Renderer.init();
 
-        /*
-         * Physics.
-         */
+        // ----------------------------------------------------
+        // PHYSICS
+        // ----------------------------------------------------
+
         Physics.init();
 
-        /*
-         * Particles.
-         */
+        // ----------------------------------------------------
+        // PARTICLES
+        // ----------------------------------------------------
+
         Particles.init();
 
-        /*
-         * Static game objects.
-         */
+        // ----------------------------------------------------
+        // STATIC GAME OBJECTS
+        // ----------------------------------------------------
+
         Obstacles.init();
 
         /*
-         * Environment MUST be initialized after Obstacles,
-         * because the plate renderer reads the plate body.
+         * Environment depends on the obstacle bodies,
+         * particularly the plate and counter positions.
          */
+
         Environment.init();
 
-        /*
-         * Player.
-         */
+        // ----------------------------------------------------
+        // PLAYER
+        // ----------------------------------------------------
+
         Pancake.init();
 
-        /*
-         * Input and DOM UI.
-         */
+        // ----------------------------------------------------
+        // INPUT
+        // ----------------------------------------------------
+
         Input.init();
+
+        // ----------------------------------------------------
+        // DOM UI
+        // ----------------------------------------------------
+
         UI.init();
 
-        /*
-         * The charge UI is DOM-based now.
-         * Keep this property for compatibility with any code
-         * that might reference Game.chargeIndicator.
-         */
-        this.chargeIndicator = null;
+        // ----------------------------------------------------
+        // INITIAL STATE
+        // ----------------------------------------------------
 
         this.state = 'menu';
+
+        this.accumulator = 0;
+
+        this.lastFrameTime = 0;
+
         this.initialized = true;
 
         UI.setStartScreen();
+
         UI.showOverlay();
 
         console.log(
             'All systems initialized.'
         );
 
-        this.gameLoop();
+        /*
+         * Start the variable-rate render loop.
+         *
+         * Physics itself is stepped using the fixed timestep
+         * inside gameLoop().
+         */
+
+        requestAnimationFrame(
+            (time) => this.gameLoop(time)
+        );
     },
 
+    // --------------------------------------------------------
+    // START GAME
+    // --------------------------------------------------------
+
     start() {
+
         console.log(
             'Starting level...'
         );
 
+        this.clearResultTimer();
+
         this.reset();
 
         this.state = 'playing';
+
+        this.lastFrameTime =
+            performance.now();
+
+        this.accumulator = 0;
 
         UI.setPlayingUI();
 
@@ -102,62 +187,85 @@ const Game = {
         );
     },
 
+    // --------------------------------------------------------
+    // RESET
+    // --------------------------------------------------------
+
     reset() {
+
         console.log(
             'Resetting game...'
         );
 
+        this.clearResultTimer();
+
         /*
-         * Stop any active input state.
+         * Stop any active input state before rebuilding
+         * the simulation.
          */
+
         Input.cleanup();
 
         /*
-         * Clear the existing Matter world.
-         *
-         * Important:
-         * Physics.clearWorld() clears the world but the engine
-         * itself remains available, preserving the collision
-         * event handlers established during Physics.init().
+         * Reset the fixed timestep state.
          */
+
+        this.accumulator = 0;
+
+        this.lastFrameTime = 0;
+
+        /*
+         * Clear the current Matter world.
+         *
+         * The Physics engine itself remains available.
+         */
+
         Physics.clearWorld();
 
         /*
-         * Rebuild particles.
+         * Clear particles from the existing particle
+         * container rather than creating a new Pixi
+         * container every reset.
          */
-        Particles.init();
+
+        Particles.clear();
 
         /*
-         * Rebuild obstacles.
+         * Rebuild static physics objects.
          */
+
         Obstacles.init();
 
         /*
-         * Rebuild environment so plate/counter visuals correspond
+         * Rebuild environment visuals so they correspond
          * to the newly created obstacle bodies.
          */
+
         Environment.init();
 
         /*
-         * Rebuild pancake.
+         * Rebuild the player.
          */
+
         Pancake.init();
 
         /*
-         * Rebind input state.
-         *
-         * Input.init() is now responsible for removing any previous
-         * DOM listeners before registering new ones.
+         * Reinitialise input state.
          */
+
         Input.init();
 
-        this.state = 'playing';
+        /*
+         * The reset creates a fresh playable level,
+         * but the caller determines the final game state.
+         */
 
         UI.updateFlipCounter(
             Pancake.flipCount
         );
 
         UI.updateLevel(1);
+
         UI.hideCharge();
 
         console.log(
@@ -165,7 +273,104 @@ const Game = {
         );
     },
 
+    // --------------------------------------------------------
+    // FIXED PHYSICS UPDATE
+    // --------------------------------------------------------
+
+    fixedUpdate() {
+
+        if (this.state !== 'playing') {
+            return;
+        }
+
+        /*
+         * Advance Matter by exactly one fixed timestep.
+         */
+
+        Physics.update();
+
+        /*
+         * Update gameplay simulation that belongs to the
+         * fixed timestep.
+         */
+
+        Pancake.fixedUpdate();
+
+        Particles.update();
+
+        /*
+         * Check whether the player has left the playable
+         * game space.
+         *
+         * This is evaluated after the physics step.
+         */
+
+        Pancake.checkFell();
+
+        /*
+         * If falling caused the game to end, don't continue
+         * processing the remainder of this simulation step.
+         */
+
+        if (this.state !== 'playing') {
+            return;
+        }
+    },
+
+    // --------------------------------------------------------
+    // RENDER / PRESENTATION UPDATE
+    // --------------------------------------------------------
+
+    renderUpdate() {
+
+        /*
+         * Update real-time input charge.
+         */
+        Input.update();
+
+        /*
+         * Pixi presentation.
+         */
+
+        Pancake.renderUpdate();
+
+        Obstacles.updateGraphics();
+
+        Environment.update();
+
+        /*
+         * DOM HUD.
+         */
+
+        UI.updateFlipCounter(
+            Pancake.flipCount
+        );
+
+        /*
+         * Charge meter.
+         */
+
+        if (
+            this.state === 'playing' &&
+            Input.isCharging
+        ) {
+
+            UI.showCharge(
+                Input.getChargePercent()
+            );
+
+        } else {
+
+            UI.hideCharge();
+        }
+    },
+
+    // --------------------------------------------------------
+    // WIN
+    // --------------------------------------------------------
+
     win() {
+
         if (
             this.state === 'won'
         ) {
@@ -178,7 +383,11 @@ const Game = {
 
         this.state = 'won';
 
+        this.accumulator = 0;
+
         UI.hideCharge();
+
+        Input.cleanup();
 
         const plate =
             Obstacles.items.find(
@@ -187,6 +396,7 @@ const Game = {
             );
 
         if (plate) {
+
             Particles.createWin(
                 plate.position.x,
                 plate.position.y
@@ -199,20 +409,36 @@ const Game = {
         );
 
         /*
-         * Give the celebration particles time to play before
-         * presenting the replay button.
+         * Give the celebration particles time to play
+         * before showing the replay button.
          */
-        setTimeout(() => {
-            if (this.state !== 'won') {
-                return;
-            }
 
-            UI.setRestartScreen();
-            UI.showOverlay();
-        }, 1400);
+        this.clearResultTimer();
+
+        this.resultTimer =
+            setTimeout(() => {
+
+                this.resultTimer = null;
+
+                if (
+                    this.state !== 'won'
+                ) {
+                    return;
+                }
+
+                UI.setRestartScreen();
+
+                UI.showOverlay();
+
+            }, 1400);
     },
 
+    // --------------------------------------------------------
+    // LOSE
+    // --------------------------------------------------------
+
     lose() {
+
         if (
             this.state === 'lost'
         ) {
@@ -225,6 +451,10 @@ const Game = {
 
         this.state = 'lost';
 
+        this.accumulator = 0;
+
+        Input.cleanup();
+
         UI.hideCharge();
 
         UI.showMessage(
@@ -233,110 +463,200 @@ const Game = {
         );
 
         /*
-         * Briefly show the failure state before restarting.
+         * Brief failure state before automatically preparing
+         * another attempt.
          */
-        setTimeout(() => {
-            if (this.state !== 'lost') {
-                return;
-            }
 
-            this.reset();
+        this.clearResultTimer();
 
-            this.state = 'playing';
+        this.resultTimer =
+            setTimeout(() => {
 
-            UI.setPlayingUI();
+                this.resultTimer = null;
 
-            UI.showMessage(
-                'Try again! You’ve got this! 🥞',
-                1800
-            );
-        }, 1900);
+                if (
+                    this.state !== 'lost'
+                ) {
+                    return;
+                }
+
+                this.reset();
+
+                this.state = 'playing';
+
+                this.lastFrameTime =
+                    performance.now();
+
+                this.accumulator = 0;
+
+                UI.setPlayingUI();
+
+                UI.showMessage(
+                    'Try again! You’ve got this! 🥞',
+                    1800
+                );
+
+            }, 1900);
     },
 
-    update() {
+    // --------------------------------------------------------
+    // RESULT TIMER
+    // --------------------------------------------------------
+
+    clearResultTimer() {
+
         if (
-            this.state !== 'playing'
+            this.resultTimer !== null
         ) {
-            /*
-             * Particles should still animate during the win state.
-             */
-            if (
-                this.state === 'won'
-            ) {
-                Particles.update();
-            }
 
-            Environment.update();
+            clearTimeout(
+                this.resultTimer
+            );
 
+            this.resultTimer = null;
+        }
+    },
+
+    // --------------------------------------------------------
+    // MAIN LOOP
+    // --------------------------------------------------------
+
+    gameLoop(timestamp) {
+
+        if (!this.initialized) {
             return;
         }
 
         /*
-         * Physics.
+         * First frame.
          */
-        Physics.update();
 
-        /*
-         * Pancake trail.
-         */
-        Pancake.updateTrail();
+        if (
+            this.lastFrameTime === 0
+        ) {
 
-        /*
-         * Particles.
-         */
-        Particles.update();
-
-        /*
-         * Fell detection.
-         */
-        Pancake.checkFell();
-
-        /*
-         * Visual updates.
-         */
-        Pancake.updateGraphics();
-        Pancake.drawPancakeGraphics();
-
-        Obstacles.updateGraphics();
-        Environment.update();
-
-        /*
-         * HUD.
-         */
-        UI.updateFlipCounter(
-            Pancake.flipCount
-        );
-
-        /*
-         * Charge UI.
-         */
-        if (Input.isCharging) {
-            UI.showCharge(
-                Input.getChargePercent()
-            );
-        } else {
-            UI.hideCharge();
+            this.lastFrameTime =
+                timestamp;
         }
-    },
 
-    gameLoop() {
-        this.update();
+        /*
+         * Calculate elapsed real time.
+         *
+         * Clamp large gaps so returning from a backgrounded
+         * mobile tab cannot generate hundreds of physics steps.
+         */
+
+        let frameDelta =
+            timestamp -
+            this.lastFrameTime;
+
+        this.lastFrameTime =
+            timestamp;
+
+        frameDelta =
+            Math.min(
+                Math.max(frameDelta, 0),
+                this.maxFrameDelta
+            );
+
+        /*
+         * Add elapsed time to the fixed timestep accumulator.
+         */
+
+        this.accumulator +=
+            frameDelta;
+
+        /*
+         * Run deterministic physics steps.
+         */
+
+        let physicsSteps = 0;
+
+        while (
+            this.accumulator >= this.FIXED_STEP &&
+            physicsSteps < this.maxPhysicsStepsPerFrame
+        ) {
+
+            this.fixedUpdate();
+
+            this.accumulator -=
+                this.FIXED_STEP;
+
+            physicsSteps++;
+
+            /*
+             * If the game ended during a physics step,
+             * discard any remaining accumulated simulation
+             * time.
+             */
+
+            if (
+                this.state !== 'playing'
+            ) {
+
+                this.accumulator = 0;
+
+                break;
+            }
+        }
+
+        /*
+         * If the device was extremely slow and we hit the
+         * safety limit, discard the remaining backlog rather
+         * than attempting to catch up indefinitely.
+         */
+
+        if (
+            physicsSteps >=
+            this.maxPhysicsStepsPerFrame
+        ) {
+
+            this.accumulator = 0;
+        }
+
+        /*
+         * Presentation happens once per rendered frame.
+         */
+
+        this.renderUpdate();
+
+        /*
+         * Renderer.update() intentionally remains a
+         * compatibility hook. Pixi's Application ticker
+         * owns actual rendering.
+         */
 
         Renderer.update();
 
+        /*
+         * Continue the render loop.
+         */
+
         requestAnimationFrame(
-            () => this.gameLoop()
+            (time) => this.gameLoop(time)
         );
     }
 };
 
-window.onload = () => {
-    try {
-        Game.init();
-    } catch (error) {
-        console.error(
-            'Failed to initialize Pancake Plop:',
-            error
-        );
+
+// ============================================================
+// BOOT
+// ============================================================
+
+window.addEventListener(
+    'load',
+    () => {
+
+        try {
+
+            Game.init();
+
+        } catch (error) {
+
+            console.error(
+                'Failed to initialize Pancake Plop:',
+                error
+            );
+        }
     }
-};
+);

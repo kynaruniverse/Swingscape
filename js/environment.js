@@ -1,72 +1,147 @@
-// Environment - Kitchen Scene Rendering
+// ============================================================
+// PANCAKE PLOP! — KITCHEN ENVIRONMENT
+// Visual-only kitchen scene
+// ============================================================
+//
+// Environment owns:
+//
+// • Background
+// • Walls / backsplash
+// • Window
+// • Decorative kitchen details
+// • Counter presentation
+// • Ambient dust
+//
+// IMPORTANT:
+//
+// Environment does NOT own gameplay physics.
+//
+// Counters, griddles, plates, butter, syrup and bowls are
+// created and positioned by Obstacles.
+//
+// This keeps physics and rendering responsibilities separate.
+// ============================================================
+
 const Environment = {
+
+    // --------------------------------------------------------
+    // GRAPHICS
+    // --------------------------------------------------------
+
     graphics: {
+
         background: null,
+
         kitchenWall: null,
+
         window: null,
+
         counter: null,
-        griddle: null,
-        plate: null,
+
         dustContainer: null,
+
         dustMotes: []
     },
 
+    // --------------------------------------------------------
+    // INITIALISE
+    // --------------------------------------------------------
+
     init() {
-        if (!Renderer.layers.environment) {
-            console.error('Environment: renderer environment layer is unavailable.');
+
+        if (
+            !Renderer ||
+            !Renderer.layers.environment
+        ) {
+
+            console.error(
+                'Environment: renderer environment layer unavailable.'
+            );
+
             return;
         }
 
-        // Completely rebuild the environment.
-        Renderer.clearLayer('environment');
+        /*
+         * Completely rebuild the environment.
+         */
+
+        Renderer.clearLayer(
+            'environment'
+        );
 
         this.graphics = {
+
             background: null,
+
             kitchenWall: null,
+
             window: null,
+
             counter: null,
-            griddle: null,
-            plate: null,
+
             dustContainer: null,
+
             dustMotes: []
         };
 
         this.drawBackground();
+
         this.drawKitchenWall();
+
         this.drawWindow();
+
         this.drawCounter();
-        this.drawGriddle();
-        this.drawPlate();
+
         this.createDustMotes();
+
+        console.log(
+            'Environment initialized.'
+        );
     },
 
-    drawBackground() {
-        const g = Renderer.createGraphics();
+    // ========================================================
+    // BACKGROUND
+    // ========================================================
 
-        /*
-         * Main wall background.
-         *
-         * Keep this as one large surface so there are no gaps between
-         * tiles or transparent areas.
-         */
-        const gradient = new PIXI.FillGradient(
+    drawBackground() {
+
+        const g =
+            Renderer.createGraphics();
+
+        const gradient =
+            new PIXI.FillGradient(
+                0,
+                0,
+                0,
+                CONFIG.counterY
+            );
+
+        gradient.addColorStop(
             0,
-            0,
-            0,
-            CONFIG.counterY
+            CONFIG.colors.background
         );
 
-        gradient.addColorStop(0, 0xfffbf5);
-        gradient.addColorStop(0.55, 0xf8ead8);
-        gradient.addColorStop(1, 0xf0dcc4);
+        gradient.addColorStop(
+            0.55,
+            CONFIG.colors.wall
+        );
 
-        g.beginFill(gradient);
+        gradient.addColorStop(
+            1,
+            CONFIG.colors.backgroundDark
+        );
+
+        g.beginFill(
+            gradient
+        );
+
         g.drawRect(
             0,
             0,
             CONFIG.canvasWidth,
             CONFIG.counterY
         );
+
         g.endFill();
 
         Renderer.addToLayer(
@@ -75,35 +150,70 @@ const Environment = {
             'background'
         );
 
-        this.graphics.background = g;
+        this.graphics.background =
+            g;
     },
 
+    // ========================================================
+    // KITCHEN WALL
+    // ========================================================
+
     drawKitchenWall() {
-        const g = Renderer.createGraphics();
 
-        const tileWidth = 60;
-        const tileHeight = 50;
+        const g =
+            Renderer.createGraphics();
 
-        const rows = Math.ceil(CONFIG.counterY / tileHeight);
-        const columns = Math.ceil(CONFIG.canvasWidth / tileWidth);
+        const tileWidth =
+            60;
+
+        const tileHeight =
+            50;
+
+        const rows =
+            Math.ceil(
+                CONFIG.counterY /
+                tileHeight
+            );
+
+        const columns =
+            Math.ceil(
+                CONFIG.canvasWidth /
+                tileWidth
+            );
 
         /*
-         * Subtle tiled backsplash.
-         *
-         * The tiles intentionally use very low contrast so the pancake
-         * remains the visual focus.
+         * Subtle checker variation.
          */
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < columns; col++) {
-                const x = col * tileWidth;
-                const y = row * tileHeight;
+
+        for (
+            let row = 0;
+            row < rows;
+            row++
+        ) {
+
+            for (
+                let col = 0;
+                col < columns;
+                col++
+            ) {
+
+                const x =
+                    col *
+                    tileWidth;
+
+                const y =
+                    row *
+                    tileHeight;
 
                 const tileColor =
                     (row + col) % 2 === 0
-                        ? 0xfff8ee
-                        : 0xf7eadb;
+                        ? CONFIG.colors.wallTile
+                        : CONFIG.colors.wall;
 
-                g.beginFill(tileColor);
+                g.beginFill(
+                    tileColor
+                );
+
                 g.drawRoundedRect(
                     x + 1,
                     y + 1,
@@ -111,27 +221,53 @@ const Environment = {
                     tileHeight - 2,
                     3
                 );
+
                 g.endFill();
             }
         }
 
         /*
-         * Horizontal and vertical grout lines.
+         * Grout.
          */
+
         g.lineStyle(
             1,
-            0xd9c7b2,
-            0.22
+            0xcdbba6,
+            0.20
         );
 
-        for (let x = 0; x <= CONFIG.canvasWidth; x += tileWidth) {
-            g.moveTo(x, 0);
-            g.lineTo(x, CONFIG.counterY);
+        for (
+            let x = 0;
+            x <= CONFIG.canvasWidth;
+            x += tileWidth
+        ) {
+
+            g.moveTo(
+                x,
+                0
+            );
+
+            g.lineTo(
+                x,
+                CONFIG.counterY
+            );
         }
 
-        for (let y = 0; y <= CONFIG.counterY; y += tileHeight) {
-            g.moveTo(0, y);
-            g.lineTo(CONFIG.canvasWidth, y);
+        for (
+            let y = 0;
+            y <= CONFIG.counterY;
+            y += tileHeight
+        ) {
+
+            g.moveTo(
+                0,
+                y
+            );
+
+            g.lineTo(
+                CONFIG.canvasWidth,
+                y
+            );
         }
 
         Renderer.addToLayer(
@@ -140,59 +276,86 @@ const Environment = {
             'kitchenWall'
         );
 
-        this.graphics.kitchenWall = g;
+        this.graphics.kitchenWall =
+            g;
     },
 
-    drawWindow() {
-        const g = Renderer.createGraphics();
+    // ========================================================
+    // WINDOW
+    // ========================================================
 
-        const windowW = 118;
-        const windowH = 92;
+    drawWindow() {
+
+        const g =
+            Renderer.createGraphics();
+
+        const windowWidth =
+            118;
+
+        const windowHeight =
+            92;
 
         const windowX =
-            CONFIG.canvasWidth / 2 - windowW / 2;
+            (
+                CONFIG.canvasWidth -
+                windowWidth
+            ) / 2;
 
-        const windowY = 38;
+        const windowY =
+            38;
 
         /*
-         * Outer shadow.
+         * Shadow.
          */
-        g.beginFill(0x000000, 0.08);
+
+        g.beginFill(
+            0x000000,
+            0.08
+        );
+
         g.drawRoundedRect(
             windowX - 9,
             windowY - 6,
-            windowW + 18,
-            windowH + 18,
+            windowWidth + 18,
+            windowHeight + 18,
             8
         );
+
         g.endFill();
 
         /*
-         * Wooden frame.
+         * Frame.
          */
-        g.beginFill(0xf7e7d3);
+
+        g.beginFill(
+            CONFIG.colors.windowFrame
+        );
+
         g.drawRoundedRect(
             windowX - 7,
             windowY - 7,
-            windowW + 14,
-            windowH + 14,
+            windowWidth + 14,
+            windowHeight + 14,
             7
         );
+
         g.endFill();
 
         /*
          * Glass.
          */
-        const glassGradient = new PIXI.FillGradient(
-            windowX,
-            windowY,
-            windowX,
-            windowY + windowH
-        );
+
+        const glassGradient =
+            new PIXI.FillGradient(
+                windowX,
+                windowY,
+                windowX,
+                windowY + windowHeight
+            );
 
         glassGradient.addColorStop(
             0,
-            0xb9dcf4
+            CONFIG.colors.window
         );
 
         glassGradient.addColorStop(
@@ -200,22 +363,28 @@ const Environment = {
             0xe9f5fc
         );
 
-        g.beginFill(glassGradient);
+        g.beginFill(
+            glassGradient
+        );
 
         g.drawRoundedRect(
             windowX,
             windowY,
-            windowW,
-            windowH,
+            windowWidth,
+            windowHeight,
             3
         );
 
         g.endFill();
 
         /*
-         * Simple clouds.
+         * Clouds.
          */
-        g.beginFill(0xffffff, 0.45);
+
+        g.beginFill(
+            0xffffff,
+            0.45
+        );
 
         g.drawCircle(
             windowX + 27,
@@ -238,21 +407,28 @@ const Environment = {
         g.endFill();
 
         /*
-         * Window crossbars.
+         * Window frame crossbars.
          */
-        g.beginFill(0xf7e7d3);
+
+        g.beginFill(
+            CONFIG.colors.windowFrame
+        );
 
         g.drawRect(
-            windowX + windowW / 2 - 3,
+            windowX +
+                windowWidth / 2 -
+                3,
             windowY,
             6,
-            windowH
+            windowHeight
         );
 
         g.drawRect(
             windowX,
-            windowY + windowH / 2 - 3,
-            windowW,
+            windowY +
+                windowHeight / 2 -
+                3,
+            windowWidth,
             6
         );
 
@@ -261,7 +437,47 @@ const Environment = {
         /*
          * Curtains.
          */
-        g.beginFill(0xffb8c6);
+
+        this.drawCurtains(
+            g,
+            windowX,
+            windowY,
+            windowWidth,
+            windowHeight
+        );
+
+        Renderer.addToLayer(
+            'environment',
+            g,
+            'window'
+        );
+
+        this.graphics.window =
+            g;
+    },
+
+    // ========================================================
+    // CURTAINS
+    // ========================================================
+
+    drawCurtains(
+        g,
+        windowX,
+        windowY,
+        windowWidth,
+        windowHeight
+    ) {
+
+        const curtainColor =
+            0xffb8c6;
+
+        g.beginFill(
+            curtainColor
+        );
+
+        /*
+         * Left curtain.
+         */
 
         g.moveTo(
             windowX - 9,
@@ -270,73 +486,108 @@ const Environment = {
 
         g.quadraticCurveTo(
             windowX - 22,
-            windowY + windowH * 0.45,
+            windowY +
+                windowHeight * 0.45,
             windowX - 8,
-            windowY + windowH + 8
+            windowY +
+                windowHeight +
+                8
         );
 
         g.lineTo(
             windowX + 4,
-            windowY + windowH + 8
+            windowY +
+                windowHeight +
+                8
         );
 
         g.quadraticCurveTo(
             windowX - 1,
-            windowY + windowH * 0.45,
+            windowY +
+                windowHeight * 0.45,
             windowX + 4,
             windowY - 8
         );
 
         g.closePath();
+
         g.endFill();
 
-        g.beginFill(0xffb8c6);
+        /*
+         * Right curtain.
+         */
+
+        g.beginFill(
+            curtainColor
+        );
 
         g.moveTo(
-            windowX + windowW - 4,
+            windowX +
+                windowWidth -
+                4,
             windowY - 8
         );
 
         g.quadraticCurveTo(
-            windowX + windowW + 1,
-            windowY + windowH * 0.45,
-            windowX + windowW - 8,
-            windowY + windowH + 8
+            windowX +
+                windowWidth +
+                1,
+            windowY +
+                windowHeight * 0.45,
+            windowX +
+                windowWidth -
+                8,
+            windowY +
+                windowHeight +
+                8
         );
 
         g.lineTo(
-            windowX + windowW + 9,
-            windowY + windowH + 8
+            windowX +
+                windowWidth +
+                9,
+            windowY +
+                windowHeight +
+                8
         );
 
         g.quadraticCurveTo(
-            windowX + windowW + 22,
-            windowY + windowH * 0.45,
-            windowX + windowW + 9,
+            windowX +
+                windowWidth +
+                22,
+            windowY +
+                windowHeight * 0.45,
+            windowX +
+                windowWidth +
+                9,
             windowY - 8
         );
 
         g.closePath();
+
         g.endFill();
-
-        Renderer.addToLayer(
-            'environment',
-            g,
-            'window'
-        );
-
-        this.graphics.window = g;
     },
 
-    drawCounter() {
-        const g = Renderer.createGraphics();
+    // ========================================================
+    // COUNTER PRESENTATION
+    // ========================================================
 
-        const counterY = CONFIG.counterY;
+    drawCounter() {
+
+        const g =
+            Renderer.createGraphics();
+
+        const counterY =
+            CONFIG.counterY;
 
         /*
-         * Back edge / shadow beneath the countertop.
+         * Shadow beneath the countertop.
          */
-        g.beginFill(0x704b32, 0.18);
+
+        g.beginFill(
+            0x704b32,
+            0.18
+        );
 
         g.drawRect(
             0,
@@ -348,9 +599,12 @@ const Environment = {
         g.endFill();
 
         /*
-         * Main countertop.
+         * Countertop surface.
          */
-        g.beginFill(CONFIG.colors.counterTop);
+
+        g.beginFill(
+            CONFIG.colors.counterTop
+        );
 
         g.drawRect(
             0,
@@ -364,21 +618,33 @@ const Environment = {
         /*
          * Front face.
          */
-        g.beginFill(CONFIG.colors.counter);
+
+        g.beginFill(
+            CONFIG.colors.counter
+        );
 
         g.drawRect(
             0,
             counterY + 6,
             CONFIG.canvasWidth,
-            CONFIG.canvasHeight - counterY - 6
+            Math.max(
+                0,
+                CONFIG.canvasHeight -
+                counterY -
+                6
+            )
         );
 
         g.endFill();
 
         /*
-         * Countertop highlight.
+         * Top highlight.
          */
-        g.beginFill(0xffffff, 0.3);
+
+        g.beginFill(
+            0xffffff,
+            0.30
+        );
 
         g.drawRect(
             0,
@@ -392,7 +658,11 @@ const Environment = {
         /*
          * Front edge.
          */
-        g.beginFill(0x8e623f, 0.35);
+
+        g.beginFill(
+            CONFIG.colors.counterSide,
+            0.35
+        );
 
         g.drawRect(
             0,
@@ -406,13 +676,19 @@ const Environment = {
         /*
          * Wood grain.
          */
+
         g.lineStyle(
             1,
-            0x6d4931,
+            CONFIG.colors.counterSide,
             0.12
         );
 
-        for (let i = 0; i < 14; i++) {
+        for (
+            let i = 0;
+            i < 14;
+            i++
+        ) {
+
             const y =
                 counterY +
                 18 +
@@ -444,241 +720,48 @@ const Environment = {
             'counter'
         );
 
-        this.graphics.counter = g;
+        this.graphics.counter =
+            g;
     },
 
-    drawGriddle() {
-        const g = Renderer.createGraphics();
-
-        const griddleX = CONFIG.startX;
-        const griddleY = CONFIG.counterY - 15;
-
-        /*
-         * Soft shadow.
-         */
-        g.beginFill(0x000000, 0.2);
-
-        g.drawRoundedRect(
-            griddleX - 49,
-            griddleY - 5,
-            98,
-            17,
-            5
-        );
-
-        g.endFill();
-
-        /*
-         * Main griddle.
-         */
-        g.beginFill(0x3e3e3e);
-
-        g.drawRoundedRect(
-            griddleX - 45,
-            griddleY - 12,
-            90,
-            15,
-            4
-        );
-
-        g.endFill();
-
-        /*
-         * Cooking surface.
-         */
-        g.beginFill(0x5c5c5c);
-
-        g.drawRoundedRect(
-            griddleX - 42,
-            griddleY - 12,
-            84,
-            5,
-            2
-        );
-
-        g.endFill();
-
-        /*
-         * Subtle hot glow.
-         */
-        g.beginFill(0xff5522, 0.08);
-
-        g.drawEllipse(
-            griddleX,
-            griddleY - 8,
-            48,
-            13
-        );
-
-        g.endFill();
-
-        /*
-         * Heating elements.
-         */
-        g.beginFill(0xff4d2e, 0.85);
-
-        for (let i = 0; i < 4; i++) {
-            g.drawRoundedRect(
-                griddleX - 34 + i * 20,
-                griddleY - 8,
-                12,
-                3,
-                1
-            );
-        }
-
-        g.endFill();
-
-        /*
-         * Small front highlight.
-         */
-        g.beginFill(0xffffff, 0.1);
-
-        g.drawRect(
-            griddleX - 39,
-            griddleY - 3,
-            78,
-            2
-        );
-
-        g.endFill();
-
-        Renderer.addToLayer(
-            'environment',
-            g,
-            'griddle'
-        );
-
-        this.graphics.griddle = g;
-    },
-
-    drawPlate() {
-        const g = Renderer.createGraphics();
-
-        const plate = Obstacles.items.find(
-            item => item.label === 'plate'
-        );
-
-        if (!plate) {
-            return;
-        }
-
-        const plateX = plate.position.x;
-        const plateY = plate.position.y;
-
-        /*
-         * Plate shadow.
-         */
-        g.beginFill(0x000000, 0.18);
-
-        g.drawEllipse(
-            plateX,
-            plateY + 5,
-            55,
-            9
-        );
-
-        g.endFill();
-
-        /*
-         * Outer plate.
-         */
-        g.beginFill(0xffffff);
-
-        g.drawEllipse(
-            plateX,
-            plateY - 4,
-            56,
-            14
-        );
-
-        g.endFill();
-
-        /*
-         * Plate rim.
-         */
-        g.lineStyle(
-            2,
-            0xd9d2ca,
-            0.8
-        );
-
-        g.drawEllipse(
-            plateX,
-            plateY - 4,
-            48,
-            10
-        );
-
-        /*
-         * Inner plate.
-         */
-        g.beginFill(0xf8f8f8);
-
-        g.drawEllipse(
-            plateX,
-            plateY - 5,
-            43,
-            8
-        );
-
-        g.endFill();
-
-        /*
-         * Decorative dots.
-         */
-        g.beginFill(0xffd66b);
-
-        for (let i = 0; i < 8; i++) {
-            const angle =
-                (i / 8) *
-                Math.PI *
-                2;
-
-            const dotX =
-                plateX +
-                Math.cos(angle) * 31;
-
-            const dotY =
-                plateY -
-                5 +
-                Math.sin(angle) * 5;
-
-            g.drawCircle(
-                dotX,
-                dotY,
-                2
-            );
-        }
-
-        g.endFill();
-
-        Renderer.addToLayer(
-            'environment',
-            g,
-            'plate'
-        );
-
-        this.graphics.plate = g;
-    },
+    // ========================================================
+    // AMBIENT DUST
+    // ========================================================
 
     createDustMotes() {
-        const container = new PIXI.Container();
 
-        container.zIndex = 5;
+        const container =
+            new PIXI.Container();
+
+        /*
+         * Dust is decorative only.
+         * It has no gameplay significance.
+         */
+
+        container.zIndex =
+            5;
 
         Renderer.layers.environment.addChild(
             container
         );
 
-        this.graphics.dustContainer = container;
-        this.graphics.dustMotes = [];
+        this.graphics.dustContainer =
+            container;
 
-        /*
-         * Keep dust away from the HUD and main play area.
-         */
-        for (let i = 0; i < 10; i++) {
-            const mote = new PIXI.Graphics();
+        this.graphics.dustMotes =
+            [];
+
+        const moteCount =
+            10;
+
+        for (
+            let i = 0;
+            i < moteCount;
+            i++
+        ) {
+
+            const mote =
+                new PIXI.Graphics();
 
             const radius =
                 1 +
@@ -686,7 +769,8 @@ const Environment = {
 
             mote.beginFill(
                 0xffffff,
-                0.18 + Math.random() * 0.2
+                0.18 +
+                Math.random() * 0.20
             );
 
             mote.drawCircle(
@@ -700,68 +784,118 @@ const Environment = {
             const baseX =
                 25 +
                 Math.random() *
-                (CONFIG.canvasWidth - 50);
+                (
+                    CONFIG.canvasWidth -
+                    50
+                );
 
             const baseY =
                 155 +
                 Math.random() *
                 360;
 
-            mote.x = baseX;
-            mote.y = baseY;
+            mote.x =
+                baseX;
 
-            container.addChild(mote);
+            mote.y =
+                baseY;
+
+            container.addChild(
+                mote
+            );
 
             this.graphics.dustMotes.push({
+
                 graphic: mote,
+
                 baseX,
+
                 baseY,
-                offset: Math.random() * Math.PI * 2,
-                speed: 0.25 + Math.random() * 0.45,
-                amplitudeX: 8 + Math.random() * 15,
-                amplitudeY: 5 + Math.random() * 10
+
+                offset:
+                    Math.random() *
+                    Math.PI *
+                    2,
+
+                speed:
+                    0.25 +
+                    Math.random() *
+                    0.45,
+
+                amplitudeX:
+                    8 +
+                    Math.random() *
+                    15,
+
+                amplitudeY:
+                    5 +
+                    Math.random() *
+                    10
             });
         }
     },
 
+    // ========================================================
+    // UPDATE
+    // ========================================================
+
     update() {
+
+        if (
+            !this.graphics ||
+            !this.graphics.dustMotes
+        ) {
+            return;
+        }
+
+        /*
+         * This animation is intentionally based on real time.
+         *
+         * It is visual ambience only and MUST NOT feed back
+         * into gameplay or physics.
+         */
+
         const time =
             performance.now() / 1000;
 
-        this.graphics.dustMotes.forEach(mote => {
-            if (!mote.graphic) {
-                return;
+        this.graphics.dustMotes.forEach(
+            mote => {
+
+                if (!mote.graphic) {
+                    return;
+                }
+
+                mote.graphic.x =
+                    mote.baseX +
+                    Math.sin(
+                        time *
+                        mote.speed +
+                        mote.offset
+                    ) *
+                    mote.amplitudeX;
+
+                mote.graphic.y =
+                    mote.baseY +
+                    Math.cos(
+                        time *
+                        mote.speed *
+                        0.7 +
+                        mote.offset
+                    ) *
+                    mote.amplitudeY;
+
+                mote.graphic.alpha =
+                    0.65 +
+                    Math.sin(
+                        time *
+                        mote.speed +
+                        mote.offset
+                    ) *
+                    0.2;
             }
-
-            mote.graphic.x =
-                mote.baseX +
-                Math.sin(
-                    time * mote.speed +
-                    mote.offset
-                ) *
-                mote.amplitudeX;
-
-            mote.graphic.y =
-                mote.baseY +
-                Math.cos(
-                    time * mote.speed * 0.7 +
-                    mote.offset
-                ) *
-                mote.amplitudeY;
-
-            /*
-             * Very subtle breathing alpha keeps the background
-             * feeling alive without distracting from gameplay.
-             */
-            mote.graphic.alpha =
-                0.65 +
-                Math.sin(
-                    time * mote.speed +
-                    mote.offset
-                ) *
-                0.2;
-        });
+        );
     }
 };
 
-window.Environment = Environment;
+window.Environment =
+    Environment;

@@ -1,85 +1,185 @@
-// Pancake Logic - Physics + PixiJS Rendering
+// ============================================================
+// PANCAKE PLOP! — PANCAKE SYSTEM
+// Gameplay state + Matter.js body + PixiJS visual
+// ============================================================
+//
+// Phase 6 separation:
+//
+//   Physics-owned state  → Matter body
+//   Gameplay state       → flip, landing, grounded, cooldown
+//   Visual state         → Pixi Graphics
+//
+// Pancake.fixedUpdate() runs only during Game.fixedUpdate().
+// Pancake.renderUpdate() runs during Game.renderUpdate().
+// ============================================================
+
 const Pancake = {
+
+    // --------------------------------------------------------
+    // PHYSICS
+    // --------------------------------------------------------
+
     body: null,
 
+    // --------------------------------------------------------
+    // GAMEPLAY STATE
+    // --------------------------------------------------------
+
     isResting: true,
-    restingTime: 0,
+    isGrounded: false,
+
+    hasFlipped: false,
+
+    canFlipAgain: true,
+
+    flipCooldown: 0,
 
     flipCount: 0,
 
-    trailPositions: [],
-
-    hasFlipped: false,
-    canFlipAgain: true,
-
-    lastFlipTime: 0,
-
-    contactCount: 0,
-
-    graphics: null,
-
-    faceGraphics: null,
-
-    lastSurface: null,
+    restingTime: 0,
 
     landingHandled: false,
 
+    lastSurface: null,
+
+    /*
+     * Physics owns the actual collision events.
+     *
+     * We keep a set of currently touching surface labels
+     * so the pancake can reliably determine whether it is
+     * grounded.
+     */
+    contactSurfaces: new Set(),
+
+    // --------------------------------------------------------
+    // TRAIL
+    // --------------------------------------------------------
+
+    trailPositions: [],
+
+    // --------------------------------------------------------
+    // PIXI
+    // --------------------------------------------------------
+
+    graphics: null,
+
+    // --------------------------------------------------------
+    // INITIALISE
+    // --------------------------------------------------------
+
     init() {
-        // Remove the previous pancake from the physics world.
-        if (this.body && Physics.world) {
-            Physics.removeBody(this.body);
+
+        /*
+         * Remove the previous physics body.
+         */
+
+        if (
+            this.body &&
+            Physics.world
+        ) {
+            Physics.removeBody(
+                this.body
+            );
         }
 
-        // Remove previous pancake graphics.
-        if (this.graphics && this.graphics.parent) {
-            this.graphics.parent.removeChild(this.graphics);
+        /*
+         * Remove the previous visual.
+         */
+
+        if (
+            this.graphics &&
+            this.graphics.parent
+        ) {
+            this.graphics.parent.removeChild(
+                this.graphics
+            );
         }
 
-        const { Bodies } = Matter;
+        // ----------------------------------------------------
+        // CREATE MATTER BODY
+        // ----------------------------------------------------
 
-        this.body = Bodies.rectangle(
-            CONFIG.startX,
-            CONFIG.counterY - 25,
-            CONFIG.pancakeWidth,
-            CONFIG.pancakeHeight,
+        this.body = Matter.Bodies.rectangle(
+            CONFIG.pancake.start.x,
+            CONFIG.startY,
+            CONFIG.pancake.width,
+            CONFIG.pancake.height,
             {
-                friction: CONFIG.pancakeFriction,
-                restitution: CONFIG.pancakeRestitution,
-                density: CONFIG.pancakeDensity,
                 label: 'pancake',
+
+                density:
+                    CONFIG.pancake.density,
+
+                friction:
+                    CONFIG.pancake.friction,
+
+                frictionStatic:
+                    CONFIG.pancake.friction,
+
+                frictionAir:
+                    CONFIG.pancake.frictionAir,
+
+                restitution:
+                    CONFIG.pancake.restitution,
 
                 angle: 0,
 
                 chamfer: {
-                    radius: 7
+                    radius:
+                        CONFIG.pancake.cornerRadius
                 },
 
-                frictionAir: 0.01,
-
-                // Prevent extreme angular behaviour.
-                inertia: Infinity
+                sleepThreshold: Infinity
             }
         );
 
+        // ----------------------------------------------------
+        // RESET STATE
+        // ----------------------------------------------------
+
         this.isResting = true;
-        this.restingTime = 0;
-        this.flipCount = 0;
-        this.trailPositions = [];
+        this.isGrounded = true;
+
         this.hasFlipped = false;
+
         this.canFlipAgain = true;
-        this.lastFlipTime = 0;
-        this.contactCount = 1;
-        this.lastSurface = null;
+
+        this.flipCooldown = 0;
+
+        this.flipCount = 0;
+
+        this.restingTime = 0;
+
         this.landingHandled = false;
 
-        Physics.addBody(this.body);
+        this.lastSurface = null;
 
-        // Create the pancake visual.
-        this.graphics = new PIXI.Graphics();
+        this.contactSurfaces.clear();
 
-        this.drawPancakeGraphics();
+        this.contactSurfaces.add(
+            'counter'
+        );
 
-        Renderer.layers.pancake.addChild(this.graphics);
+        this.trailPositions = [];
+
+        // ----------------------------------------------------
+        // ADD TO PHYSICS WORLD
+        // ----------------------------------------------------
+
+        Physics.addBody(
+            this.body
+        );
+
+        // ----------------------------------------------------
+        // CREATE PIXI VISUAL
+        // ----------------------------------------------------
+
+        this.graphics =
+            new PIXI.Graphics();
+
+        Renderer.layers.pancake.addChild(
+            this.graphics
+        );
 
         this.updateGraphics();
 
@@ -90,43 +190,59 @@ const Pancake = {
         );
     },
 
+    // --------------------------------------------------------
+    // DRAW PANCAKE
+    // --------------------------------------------------------
+
     drawPancakeGraphics() {
+
         if (!this.graphics) {
             return;
         }
 
-        const g = this.graphics;
+        const g =
+            this.graphics;
 
         g.clear();
 
-        const width = CONFIG.pancakeWidth;
-        const height = CONFIG.pancakeHeight;
+        const width =
+            CONFIG.pancake.width;
 
-        // ------------------------------------------------------------
-        // Ground shadow
-        // ------------------------------------------------------------
+        const height =
+            CONFIG.pancake.height;
 
-        g.beginFill(0x000000, 0.14);
+        // ----------------------------------------------------
+        // SHADOW
+        // ----------------------------------------------------
 
-        g.drawEllipse(
-            0,
-            height * 0.45,
-            width / 2 + 3,
-            4
-        );
+        if (this.isGrounded) {
 
-        g.endFill();
+            g.beginFill(
+                0x000000,
+                0.14
+            );
 
-        // ------------------------------------------------------------
-        // Pancake outer body
-        // ------------------------------------------------------------
+            g.drawEllipse(
+                0,
+                height * 0.48,
+                width / 2 + 4,
+                4
+            );
 
-        const gradient = new PIXI.FillGradient(
-            0,
-            -height / 2,
-            0,
-            height / 2
-        );
+            g.endFill();
+        }
+
+        // ----------------------------------------------------
+        // PANCAKE BODY
+        // ----------------------------------------------------
+
+        const gradient =
+            new PIXI.FillGradient(
+                0,
+                -height / 2,
+                0,
+                height / 2
+            );
 
         gradient.addColorStop(
             0,
@@ -143,21 +259,23 @@ const Pancake = {
             CONFIG.colors.pancakeDark
         );
 
-        g.beginFill(gradient);
+        g.beginFill(
+            gradient
+        );
 
         g.drawRoundedRect(
             -width / 2,
             -height / 2,
             width,
             height,
-            7
+            CONFIG.pancake.cornerRadius
         );
 
         g.endFill();
 
-        // ------------------------------------------------------------
-        // Pancake edge
-        // ------------------------------------------------------------
+        // ----------------------------------------------------
+        // EDGE
+        // ----------------------------------------------------
 
         g.lineStyle(
             1.5,
@@ -170,14 +288,17 @@ const Pancake = {
             -height / 2,
             width,
             height,
-            7
+            CONFIG.pancake.cornerRadius
         );
 
-        // ------------------------------------------------------------
-        // Pancake highlights
-        // ------------------------------------------------------------
+        // ----------------------------------------------------
+        // TOP HIGHLIGHT
+        // ----------------------------------------------------
 
-        g.beginFill(0xffffff, 0.16);
+        g.beginFill(
+            0xffffff,
+            0.16
+        );
 
         g.drawRoundedRect(
             -width / 2 + 5,
@@ -189,35 +310,69 @@ const Pancake = {
 
         g.endFill();
 
-        // ------------------------------------------------------------
-        // Brown cooking spots
-        // ------------------------------------------------------------
+        // ----------------------------------------------------
+        // COOKING SPOTS
+        // ----------------------------------------------------
 
-        g.beginFill(0xb97832, 0.25);
+        g.beginFill(
+            0xb97832,
+            0.25
+        );
 
-        g.drawCircle(-18, -2, 2);
-        g.drawCircle(8, 1, 2);
-        g.drawCircle(21, -2, 1.5);
-        g.drawCircle(-4, -1, 1.5);
+        g.drawCircle(
+            -18,
+            -2,
+            2
+        );
+
+        g.drawCircle(
+            8,
+            1,
+            2
+        );
+
+        g.drawCircle(
+            21,
+            -2,
+            1.5
+        );
+
+        g.drawCircle(
+            -4,
+            -1,
+            1.5
+        );
 
         g.endFill();
 
-        // ------------------------------------------------------------
-        // Butter pat
-        // ------------------------------------------------------------
+        // ----------------------------------------------------
+        // BUTTER
+        // ----------------------------------------------------
 
         const normalizedAngle =
             Math.abs(
-                ((this.body ? this.body.angle : 0) + Math.PI) %
-                    (Math.PI * 2) -
+                Matter.Common.clamp(
+                    this.body
+                        ? this.body.angle
+                        : 0,
+                    -Math.PI,
                     Math.PI
+                )
             );
 
         const roughlyFlat =
-            normalizedAngle < 0.3;
+            normalizedAngle <
+                CONFIG.gameplay.landing.angleTolerance ||
+            Math.abs(
+                normalizedAngle - Math.PI
+            ) <
+                CONFIG.gameplay.landing.angleTolerance;
 
         if (roughlyFlat) {
-            g.beginFill(CONFIG.colors.butter);
+
+            g.beginFill(
+                CONFIG.colors.butter
+            );
 
             g.drawRoundedRect(
                 -10,
@@ -229,7 +384,9 @@ const Pancake = {
 
             g.endFill();
 
-            g.beginFill(CONFIG.colors.butterShadow);
+            g.beginFill(
+                CONFIG.colors.butterShadow
+            );
 
             g.drawRect(
                 -10,
@@ -240,7 +397,10 @@ const Pancake = {
 
             g.endFill();
 
-            g.beginFill(0xffffff, 0.4);
+            g.beginFill(
+                0xffffff,
+                0.4
+            );
 
             g.drawRect(
                 -7,
@@ -252,16 +412,22 @@ const Pancake = {
             g.endFill();
         }
 
-        // ------------------------------------------------------------
-        // Face
-        // ------------------------------------------------------------
+        // ----------------------------------------------------
+        // FACE
+        // ----------------------------------------------------
 
-        if (Game.state !== 'playing') {
+        if (
+            typeof Game !== 'undefined' &&
+            Game.state !== 'playing'
+        ) {
             return;
         }
 
-        // Eyes.
-        g.beginFill(0x333333);
+        // Eyes
+
+        g.beginFill(
+            0x333333
+        );
 
         g.drawCircle(
             -15,
@@ -277,8 +443,11 @@ const Pancake = {
 
         g.endFill();
 
-        // Eye highlights.
-        g.beginFill(0xffffff);
+        // Eye highlights
+
+        g.beginFill(
+            0xffffff
+        );
 
         g.drawCircle(
             -14,
@@ -294,8 +463,12 @@ const Pancake = {
 
         g.endFill();
 
-        // Cheeks.
-        g.beginFill(0xff9696, 0.38);
+        // Cheeks
+
+        g.beginFill(
+            0xff9696,
+            0.38
+        );
 
         g.drawCircle(
             -22,
@@ -311,7 +484,8 @@ const Pancake = {
 
         g.endFill();
 
-        // Mouth.
+        // Mouth
+
         g.lineStyle(
             2,
             0x333333,
@@ -319,6 +493,7 @@ const Pancake = {
         );
 
         if (this.isResting) {
+
             g.arc(
                 0,
                 1,
@@ -326,33 +501,55 @@ const Pancake = {
                 0.15 * Math.PI,
                 0.85 * Math.PI
             );
+
         } else {
-            g.moveTo(-5, 4);
-            g.lineTo(5, 4);
+
+            g.moveTo(
+                -5,
+                4
+            );
+
+            g.lineTo(
+                5,
+                4
+            );
         }
 
         g.stroke();
     },
 
+    // --------------------------------------------------------
+    // UPDATE GRAPHICS
+    // --------------------------------------------------------
+
     updateGraphics() {
-        if (!this.body || !this.graphics) {
+
+        if (
+            !this.body ||
+            !this.graphics
+        ) {
             return;
         }
 
-        this.graphics.x = this.body.position.x;
-        this.graphics.y = this.body.position.y;
-        this.graphics.rotation = this.body.angle;
+        this.graphics.x =
+            this.body.position.x;
 
-        // Redraw only when the visual state can change.
+        this.graphics.y =
+            this.body.position.y;
+
+        this.graphics.rotation =
+            this.body.angle;
+
         this.drawPancakeGraphics();
     },
 
-    flip(power) {
-        if (!this.body) {
-            return false;
-        }
+    // --------------------------------------------------------
+    // FLIP
+    // --------------------------------------------------------
 
-        if (!this.canFlipAgain) {
+    flip(power) {
+
+        if (!this.body) {
             return false;
         }
 
@@ -360,28 +557,46 @@ const Pancake = {
             return false;
         }
 
-        const normalizedPower = Math.max(
-            0,
-            Math.min(
-                1,
-                (power || 5) / CONFIG.maxFlipPower
-            )
-        );
+        const normalizedPower =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    Number(power || 0) /
+                    CONFIG.gameplay.flip.maxPower
+                )
+            );
+
+        // ----------------------------------------------------
+        // WAKE BODY
+        // ----------------------------------------------------
 
         Matter.Sleeping.set(
             this.body,
             false
         );
 
-        // ------------------------------------------------------------
-        // Calculate movement.
-        // ------------------------------------------------------------
+        // ----------------------------------------------------
+        // CALCULATE VELOCITY
+        // ----------------------------------------------------
 
         const upwardVelocity =
-            -(5 + normalizedPower * 15);
+            -(
+                CONFIG.gameplay.flip.upwardVelocityMin +
+                normalizedPower *
+                (
+                    CONFIG.gameplay.flip.upwardVelocityMax -
+                    CONFIG.gameplay.flip.upwardVelocityMin
+                )
+            );
 
         const forwardVelocity =
-            3 + normalizedPower * 8;
+            CONFIG.gameplay.flip.forwardVelocityMin +
+            normalizedPower *
+            (
+                CONFIG.gameplay.flip.forwardVelocityMax -
+                CONFIG.gameplay.flip.forwardVelocityMin
+            );
 
         Matter.Body.setVelocity(
             this.body,
@@ -391,60 +606,80 @@ const Pancake = {
             }
         );
 
-        // ------------------------------------------------------------
-        // Calculate rotation.
-        // ------------------------------------------------------------
+        // ----------------------------------------------------
+        // ROTATION
+        // ----------------------------------------------------
 
         const angularVelocity =
-            0.05 + normalizedPower * 0.3;
+            CONFIG.gameplay.flip.angularVelocityMin +
+            normalizedPower *
+            (
+                CONFIG.gameplay.flip.angularVelocityMax -
+                CONFIG.gameplay.flip.angularVelocityMin
+            );
 
         Matter.Body.setAngularVelocity(
             this.body,
             angularVelocity
         );
 
-        // ------------------------------------------------------------
-        // State.
-        // ------------------------------------------------------------
-
-        this.body.frictionAir =
-            CONFIG.airFriction;
+        // ----------------------------------------------------
+        // STATE
+        // ----------------------------------------------------
 
         this.isResting = false;
+
+        this.isGrounded = false;
+
         this.hasFlipped = true;
+
         this.canFlipAgain = false;
-        this.lastFlipTime = Date.now();
-        this.contactCount = 0;
+
+        this.flipCooldown =
+            CONFIG.gameplay.flip.cooldown;
+
+        this.restingTime = 0;
+
+        this.contactSurfaces.clear();
+
         this.lastSurface = null;
+
         this.landingHandled = false;
 
         this.flipCount++;
 
-        // Clear old trail.
         this.trailPositions = [];
 
-        // Flip particles.
-        Particles.createFlip(
-            this.body.position.x,
-            this.body.position.y
-        );
+        // ----------------------------------------------------
+        // PARTICLES
+        // ----------------------------------------------------
 
-        // Prevent repeated instant flips.
-        setTimeout(() => {
-            this.canFlipAgain = true;
-        }, 500);
-
-        this.drawPancakeGraphics();
+        if (
+            typeof Particles !== 'undefined'
+        ) {
+            Particles.createFlip(
+                this.body.position.x,
+                this.body.position.y
+            );
+        }
 
         return true;
     },
 
+    // --------------------------------------------------------
+    // CAN FLIP
+    // --------------------------------------------------------
+
     canFlip() {
+
         if (!this.body) {
             return false;
         }
 
-        if (Game.state !== 'playing') {
+        if (
+            typeof Game !== 'undefined' &&
+            Game.state !== 'playing'
+        ) {
             return false;
         }
 
@@ -452,33 +687,53 @@ const Pancake = {
             return false;
         }
 
-        // A pancake can be flipped while resting on a valid surface.
-        if (this.isResting) {
-            return true;
-        }
-
-        // It can also be flipped during a short contact window.
-        return this.contactCount > 0;
-    },
-
-    isPancake(body) {
-        return body &&
-            body.label === 'pancake';
-    },
-
-    isInAir() {
-        if (!this.body) {
+        /*
+         * The pancake must be grounded.
+         *
+         * This prevents accidental mid-air re-flips.
+         */
+        if (!this.isGrounded) {
             return false;
         }
 
-        return (
-            Math.abs(this.body.velocity.y) > 0.5 ||
-            Math.abs(this.body.velocity.x) > 0.5
+        return true;
+    },
+
+    // --------------------------------------------------------
+    // BODY IDENTIFICATION
+    // --------------------------------------------------------
+
+    isPancake(body) {
+
+        return !!(
+            body &&
+            body.label === 'pancake'
         );
     },
 
-    handleCollision(otherBody) {
-        if (!this.body || !otherBody) {
+    // --------------------------------------------------------
+    // AIRBORNE STATE
+    // --------------------------------------------------------
+
+    isInAir() {
+
+        return !!(
+            this.body &&
+            !this.isGrounded
+        );
+    },
+
+    // --------------------------------------------------------
+    // CONTACT START
+    // Called by Physics
+    // --------------------------------------------------------
+
+    beginContact(otherBody) {
+
+        if (
+            !this.body ||
+            !otherBody
+        ) {
             return;
         }
 
@@ -489,56 +744,390 @@ const Pancake = {
             'butter'
         ];
 
-        if (!validSurfaces.includes(otherBody.label)) {
+        if (
+            !validSurfaces.includes(
+                otherBody.label
+            )
+        ) {
             return;
         }
 
-        this.contactCount++;
-
-        this.lastSurface = otherBody;
-
-        const velocityX = this.body.velocity.x;
-        const velocityY = this.body.velocity.y;
-
-        const speed = Math.sqrt(
-            velocityX * velocityX +
-            velocityY * velocityY
+        this.contactSurfaces.add(
+            otherBody.label
         );
 
-        // Only treat the pancake as landed when:
-        // 1. It was actually flipped.
-        // 2. Its movement has slowed sufficiently.
-        // 3. We haven't already processed this landing.
-        if (
-            this.hasFlipped &&
-            !this.landingHandled &&
-            speed < 3
-        ) {
-            this.land(otherBody);
-        }
+        this.lastSurface =
+            otherBody;
+
+        /*
+         * We do NOT immediately call land().
+         *
+         * The pancake may still be moving too quickly.
+         * fixedUpdate() will decide when the landing is
+         * actually valid.
+         */
+
+        this.updateGroundedState();
     },
 
-    land(surface) {
+    // --------------------------------------------------------
+    // CONTACT END
+    // Called by Physics
+    // --------------------------------------------------------
+
+    endContact(otherBody) {
+
+        if (
+            !otherBody
+        ) {
+            return;
+        }
+
+        this.contactSurfaces.delete(
+            otherBody.label
+        );
+
+        this.updateGroundedState();
+    },
+
+    // --------------------------------------------------------
+    // GROUND STATE
+    // --------------------------------------------------------
+
+    updateGroundedState() {
+
+        const grounded =
+            this.contactSurfaces.size > 0;
+
+        this.isGrounded =
+            grounded;
+
+        if (!grounded) {
+
+            this.isResting =
+                false;
+
+            this.restingTime =
+                0;
+
+            return;
+        }
+
+        /*
+         * Grounded does not automatically mean landed.
+         *
+         * The body still needs to be moving slowly enough.
+         */
+    },
+
+    // --------------------------------------------------------
+    // FIXED UPDATE
+    // --------------------------------------------------------
+
+    fixedUpdate(deltaTime = CONFIG.physics.fixedDeltaTime) {
+
         if (!this.body) {
             return;
         }
 
-        if (this.landingHandled) {
+        const dt =
+            Math.max(
+                0,
+                Math.min(
+                    CONFIG.physics.maxFrameDelta,
+                    deltaTime
+                )
+            );
+
+        // ----------------------------------------------------
+        // FLIP COOLDOWN
+        // ----------------------------------------------------
+
+        if (
+            this.flipCooldown > 0
+        ) {
+
+            this.flipCooldown -= dt;
+
+            if (
+                this.flipCooldown <= 0
+            ) {
+                this.flipCooldown = 0;
+                this.canFlipAgain = true;
+            }
+        }
+
+        // ----------------------------------------------------
+        // GROUND STATE
+        // ----------------------------------------------------
+
+        this.updateGroundedState();
+
+        // ----------------------------------------------------
+        // LANDING
+        // ----------------------------------------------------
+
+        this.checkLanding();
+
+        // ----------------------------------------------------
+        // RESTING TIME
+        // ----------------------------------------------------
+
+        if (this.isResting) {
+
+            this.restingTime += dt;
+
+        } else {
+
+            this.restingTime = 0;
+        }
+
+        // ----------------------------------------------------
+        // TRAIL
+        // ----------------------------------------------------
+
+        this.updateTrail();
+    },
+
+    // --------------------------------------------------------
+    // RENDER UPDATE
+    // --------------------------------------------------------
+
+    renderUpdate() {
+
+        this.updateGraphics();
+    },
+
+    // --------------------------------------------------------
+    // FALL CHECK
+    // --------------------------------------------------------
+
+    checkFell() {
+
+        if (!this.body) {
+            return false;
+        }
+
+        if (
+            this.body.position.y >
+            CONFIG.fallY
+        ) {
+
+            if (
+                typeof Game !== 'undefined'
+            ) {
+                Game.lose();
+            }
+
+            return true;
+        }
+
+        return false;
+    },
+
+    // --------------------------------------------------------
+    // TRAIL
+    // --------------------------------------------------------
+
+    updateTrail() {
+
+        if (
+            this.hasFlipped &&
+            this.body
+        ) {
+
+            this.trailPositions.push({
+                x:
+                    this.body.position.x,
+
+                y:
+                    this.body.position.y,
+
+                life: 1
+            });
+        }
+
+        /*
+         * Keep the trail bounded.
+         */
+
+        const maxTrail =
+            CONFIG.particles.maxParticles > 0
+                ? CONFIG.particles.maxParticles
+                : 300;
+
+        if (
+            this.trailPositions.length >
+            maxTrail
+        ) {
+
+            this.trailPositions.shift();
+        }
+
+        const trailFadeRate =
+            0.03;
+
+        const trailGravity =
+            0.05;
+
+        for (
+            let i =
+                this.trailPositions.length - 1;
+
+            i >= 0;
+
+            i--
+        ) {
+
+            const trail =
+                this.trailPositions[i];
+
+            trail.life -=
+                trailFadeRate;
+
+            trail.y +=
+                trailGravity;
+
+            if (
+                trail.life <= 0
+            ) {
+
+                this.trailPositions.splice(
+                    i,
+                    1
+                );
+            }
+        }
+    },
+
+    // --------------------------------------------------------
+    // LANDING CHECK
+    // --------------------------------------------------------
+
+    checkLanding() {
+
+        if (
+            !this.body ||
+            !this.hasFlipped ||
+            this.landingHandled
+        ) {
             return;
         }
 
-        this.landingHandled = true;
+        if (
+            this.contactSurfaces.size === 0
+        ) {
+            return;
+        }
 
-        this.isResting = true;
-        this.hasFlipped = false;
-        this.lastSurface = surface;
+        const velocity =
+            this.body.velocity;
 
-        this.body.frictionAir = 0.01;
+        const speed =
+            Math.sqrt(
+                velocity.x * velocity.x +
+                velocity.y * velocity.y
+            );
+
+        const angularSpeed =
+            Math.abs(
+                this.body.angularVelocity
+            );
+
+        /*
+         * Wait until both linear and rotational movement
+         * have settled sufficiently.
+         */
+
+        if (
+            speed >
+            CONFIG.gameplay.landing.maxSpeed
+        ) {
+            return;
+        }
+
+        if (
+            angularSpeed >
+            CONFIG.gameplay.landing.maxAngularVelocity
+        ) {
+            return;
+        }
+
+        /*
+         * Find the most important surface currently touching.
+         */
+
+        let surface =
+            this.lastSurface;
+
+        if (
+            !surface ||
+            !this.contactSurfaces.has(
+                surface.label
+            )
+        ) {
+
+            const surfaceLabel =
+                this.contactSurfaces.values()
+                    .next()
+                    .value;
+
+            if (!surfaceLabel) {
+                return;
+            }
+
+            surface = {
+                label: surfaceLabel
+            };
+        }
+
+        this.land(
+            surface
+        );
+    },
+
+    // --------------------------------------------------------
+    // LAND
+    // --------------------------------------------------------
+
+    land(surface) {
+
+        if (
+            !this.body ||
+            this.landingHandled
+        ) {
+            return;
+        }
+
+        this.landingHandled =
+            true;
+
+        this.isResting =
+            true;
+
+        this.isGrounded =
+            true;
+
+        this.hasFlipped =
+            false;
+
+        this.lastSurface =
+            surface;
+
+        this.restingTime =
+            0;
+
+        /*
+         * Stop small residual movement.
+         */
 
         Matter.Body.setVelocity(
             this.body,
             {
-                x: this.body.velocity.x * 0.15,
+                x:
+                    this.body.velocity.x *
+                    0.15,
+
                 y: 0
             }
         );
@@ -548,67 +1137,111 @@ const Pancake = {
             0
         );
 
-        // Slightly straighten the pancake when it lands.
-        const angle =
-            this.body.angle % (Math.PI * 2);
+        /*
+         * Snap to the nearest flat orientation.
+         *
+         * This allows either face of the pancake to land flat.
+         */
 
-        let targetAngle = 0;
+        const fullRotation =
+            Math.PI * 2;
 
-        if (
-            Math.abs(
-                Math.abs(angle) - Math.PI
-            ) < 0.35
-        ) {
-            targetAngle = Math.PI;
+        let angle =
+            this.body.angle %
+            fullRotation;
+
+        if (angle < 0) {
+            angle += fullRotation;
         }
+
+        const distanceToZero =
+            Math.min(
+                angle,
+                fullRotation - angle
+            );
+
+        const distanceToPi =
+            Math.abs(
+                angle - Math.PI
+            );
+
+        const targetAngle =
+            distanceToZero <= distanceToPi
+                ? 0
+                : Math.PI;
 
         Matter.Body.setAngle(
             this.body,
             targetAngle
         );
 
-        Particles.createLanding(
-            this.body.position.x,
-            this.body.position.y
-        );
+        // ----------------------------------------------------
+        // PARTICLES
+        // ----------------------------------------------------
 
-        // ------------------------------------------------------------
-        // Plate = win.
-        // ------------------------------------------------------------
-
-        if (surface.label === 'plate') {
-            Game.win();
-        }
-
-        // ------------------------------------------------------------
-        // Normal surfaces.
-        // ------------------------------------------------------------
-
-        else if (
-            surface.label === 'counter' ||
-            surface.label === 'griddle'
+        if (
+            typeof Particles !== 'undefined'
         ) {
-            UI.showMessage(
-                'Nice! Flip again! 🥞'
+            Particles.createLanding(
+                this.body.position.x,
+                this.body.position.y
             );
-
-            // Allow another flip after landing.
-            this.canFlipAgain = true;
         }
 
-        // ------------------------------------------------------------
-        // Butter = bounce.
-        // ------------------------------------------------------------
+        // ----------------------------------------------------
+        // PLATE = EVALUATE LANDING
+        // ----------------------------------------------------
 
-        else if (surface.label === 'butter') {
+        if (
+            surface.label === 'plate'
+        ) {
+
+            const isFaceUp =
+                this.isFaceUp();
+
+            if (isFaceUp) {
+
+                if (
+                    typeof Game !== 'undefined'
+                ) {
+                    Game.win();
+                }
+
+            } else {
+
+                /*
+                 * A face-down pancake on the plate is a bad
+                 * landing.
+                 */
+                if (
+                    typeof Game !== 'undefined'
+                ) {
+                    Game.lose();
+                }
+            }
+
+            return;
+        }
+
+        // ----------------------------------------------------
+        // BUTTER = BOUNCE
+        // ----------------------------------------------------
+
+        if (
+            surface.label === 'butter'
+        ) {
+
             const bounceX =
-                this.body.velocity.x * 1.35;
+                this.body.velocity.x *
+                CONFIG.obstacles.butter.bounceVelocityMultiplier;
 
             const bounceY =
                 -Math.max(
-                    4,
-                    Math.abs(this.body.velocity.y) *
-                    CONFIG.butterRestitution
+                    CONFIG.obstacles.butter.minimumBounceVelocity,
+                    Math.abs(
+                        this.body.velocity.y
+                    ) *
+                    CONFIG.obstacles.butter.restitution
                 );
 
             Matter.Body.setVelocity(
@@ -619,66 +1252,92 @@ const Pancake = {
                 }
             );
 
-            this.isResting = false;
-            this.hasFlipped = true;
-            this.landingHandled = false;
+            const bounceAngularVelocity =
+                CONFIG.gameplay.flip.angularVelocityMin;
 
-            UI.showMessage(
-                'Boing! 🧈'
+            Matter.Body.setAngularVelocity(
+                this.body,
+                bounceAngularVelocity
             );
+
+            this.isResting =
+                false;
+
+            this.isGrounded =
+                false;
+
+            this.hasFlipped =
+                true;
+
+            this.landingHandled =
+                false;
+
+            this.contactSurfaces.clear();
+
+            if (
+                typeof UI !== 'undefined'
+            ) {
+                UI.showMessage(
+                    'Boing! 🧈'
+                );
+            }
+
+            return;
         }
 
-        this.drawPancakeGraphics();
-    },
-
-    checkFell() {
-        if (!this.body) {
-            return false;
-        }
+        // ----------------------------------------------------
+        // NORMAL SURFACES
+        // ----------------------------------------------------
 
         if (
-            this.body.position.y >
-            CONFIG.canvasHeight + 100
+            surface.label === 'counter' ||
+            surface.label === 'griddle'
         ) {
-            Game.lose();
+
+            this.canFlipAgain =
+                true;
+
+            if (
+                typeof UI !== 'undefined'
+            ) {
+                UI.showMessage(
+                    'Nice! Flip again! 🥞'
+                );
+            }
+        }
+    },
+
+    // --------------------------------------------------------
+    // FACE-UP CHECK
+    // --------------------------------------------------------
+
+    isFaceUp() {
+
+        if (!this.body) {
             return true;
         }
 
-        return false;
-    },
+        const tolerance =
+            CONFIG.gameplay.landing.angleTolerance;
 
-    updateTrail() {
-        if (
-            this.hasFlipped &&
-            this.body
-        ) {
-            this.trailPositions.push({
-                x: this.body.position.x,
-                y: this.body.position.y,
-                life: 1
-            });
+        const fullRotation =
+            Math.PI * 2;
+
+        let angle =
+            this.body.angle %
+            fullRotation;
+
+        if (angle < 0) {
+            angle += fullRotation;
         }
 
-        // Limit trail size.
-        if (this.trailPositions.length > 40) {
-            this.trailPositions.shift();
-        }
+        const distanceToZero =
+            Math.min(
+                angle,
+                fullRotation - angle
+            );
 
-        for (
-            let i = this.trailPositions.length - 1;
-            i >= 0;
-            i--
-        ) {
-            const trail =
-                this.trailPositions[i];
-
-            trail.life -= 0.035;
-            trail.y += 0.35;
-
-            if (trail.life <= 0) {
-                this.trailPositions.splice(i, 1);
-            }
-        }
+        return distanceToZero <= tolerance;
     }
 };
 

@@ -1,7 +1,27 @@
-// Renderer - PixiJS Application Setup
+// ============================================================
+// PANCAKE PLOP! — PIXI RENDERER
+// Fixed logical game space: 420 × 750
+// ============================================================
+
 const Renderer = {
+
+    // --------------------------------------------------------
+    // PIXI REFERENCES
+    // --------------------------------------------------------
+
     app: null,
     stage: null,
+
+    // --------------------------------------------------------
+    // EVENT HANDLER REFERENCES
+    // --------------------------------------------------------
+
+    resizeHandler: null,
+    orientationHandler: null,
+
+    // --------------------------------------------------------
+    // RENDER LAYERS
+    // --------------------------------------------------------
 
     layers: {
         background: null,
@@ -13,273 +33,603 @@ const Renderer = {
         ui: null
     },
 
+    // --------------------------------------------------------
+    // GRAPHICS REFERENCES
+    // --------------------------------------------------------
+
     graphics: {
         environment: new Map(),
         obstacles: new Map(),
-        pancake: null,
-        particles: []
+        pancake: null
     },
 
     initialized: false,
 
+    // --------------------------------------------------------
+    // INITIALISE
+    // --------------------------------------------------------
+
     init() {
-        // Prevent accidental double initialization.
+
         if (this.initialized) {
             return;
         }
 
-        const container = document.getElementById('pixi-container');
+        const container =
+            document.getElementById(
+                'pixi-container'
+            );
 
         if (!container) {
-            console.error('Renderer: #pixi-container was not found.');
-            return;
-        }
 
-        // Make sure the container is clean.
-        container.innerHTML = '';
+            console.error(
+                'Renderer: #pixi-container was not found.'
+            );
 
-        // Create Pixi application.
-        this.app = new PIXI.Application({
-            width: CONFIG.canvasWidth,
-            height: CONFIG.canvasHeight,
-            backgroundColor: 0xfef3e2,
-            antialias: true,
-            resolution: Math.max(window.devicePixelRatio || 1, 1),
-            autoDensity: true,
-            powerPreference: 'high-performance'
-        });
-
-        // Keep the Pixi canvas completely inside our game container.
-        const view = this.app.view;
-
-        view.style.position = 'absolute';
-        view.style.left = '0';
-        view.style.top = '0';
-        view.style.width = '100%';
-        view.style.height = '100%';
-        view.style.display = 'block';
-        view.style.touchAction = 'none';
-
-        container.appendChild(view);
-
-        this.stage = this.app.stage;
-
-        // Create rendering layers.
-        this.layers.background = new PIXI.Container();
-        this.layers.environment = new PIXI.Container();
-        this.layers.obstacles = new PIXI.Container();
-        this.layers.pancake = new PIXI.Container();
-        this.layers.particles = new PIXI.Container();
-        this.layers.effects = new PIXI.Container();
-        this.layers.ui = new PIXI.Container();
-
-        // Give each layer a predictable z-index.
-        this.layers.background.zIndex = 0;
-        this.layers.environment.zIndex = 10;
-        this.layers.obstacles.zIndex = 20;
-        this.layers.pancake.zIndex = 30;
-        this.layers.particles.zIndex = 40;
-        this.layers.effects.zIndex = 50;
-        this.layers.ui.zIndex = 100;
-
-        this.stage.sortableChildren = true;
-
-        // Add layers in rendering order.
-        this.stage.addChild(this.layers.background);
-        this.stage.addChild(this.layers.environment);
-        this.stage.addChild(this.layers.obstacles);
-        this.stage.addChild(this.layers.pancake);
-        this.stage.addChild(this.layers.particles);
-        this.stage.addChild(this.layers.effects);
-        this.stage.addChild(this.layers.ui);
-
-        // Initial sizing.
-        this.handleResize();
-
-        // Handle future resizing.
-        window.addEventListener('resize', () => {
-            this.handleResize();
-        });
-
-        // Handle orientation changes on mobile.
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                this.handleResize();
-            }, 100);
-        });
-
-        this.initialized = true;
-
-        console.log('PixiJS renderer initialized');
-    },
-
-    handleResize() {
-        if (!this.app || !this.stage) {
-            return;
-        }
-
-        const container = document.getElementById('game-container');
-
-        if (!container) {
-            return;
-        }
-
-        const rect = container.getBoundingClientRect();
-
-        if (rect.width <= 0 || rect.height <= 0) {
             return;
         }
 
         /*
-         * The game itself always uses the logical resolution:
-         *
-         *     420 x 750
-         *
-         * The Pixi canvas, however, needs to physically match the
-         * size of the browser container.
+         * Keep the renderer container clean.
          */
-        this.app.renderer.resize(rect.width, rect.height);
+        container.innerHTML = '';
 
-        // Calculate a uniform scale so the entire game remains visible.
-        const scaleX = rect.width / CONFIG.canvasWidth;
-        const scaleY = rect.height / CONFIG.canvasHeight;
+        /*
+         * Pixi renders in the game's fixed logical coordinate
+         * system.
+         *
+         * The DOM/CSS layer handles scaling to the device.
+         */
+        const resolution =
+            Math.min(
+                window.devicePixelRatio || 1,
+                2
+            );
 
-        const scale = Math.min(scaleX, scaleY);
+        this.app =
+            new PIXI.Application({
 
-        this.stage.scale.set(scale);
+                width:
+                    CONFIG.canvasWidth,
 
-        // Center the logical game inside the available canvas.
-        this.stage.x = (rect.width - CONFIG.canvasWidth * scale) / 2;
-        this.stage.y = (rect.height - CONFIG.canvasHeight * scale) / 2;
+                height:
+                    CONFIG.canvasHeight,
+
+                backgroundColor:
+                    0xfef3e2,
+
+                antialias: true,
+
+                resolution,
+
+                autoDensity: true,
+
+                powerPreference:
+                    'high-performance'
+            });
+
+        const view =
+            this.app.view;
+
+        /*
+         * The canvas fills the presentation container.
+         *
+         * The logical Pixi coordinate system remains
+         * 420 × 750.
+         */
+        view.style.position =
+            'absolute';
+
+        view.style.left =
+            '0';
+
+        view.style.top =
+            '0';
+
+        view.style.width =
+            '100%';
+
+        view.style.height =
+            '100%';
+
+        view.style.display =
+            'block';
+
+        view.style.touchAction =
+            'none';
+
+        view.style.userSelect =
+            'none';
+
+        container.appendChild(
+            view
+        );
+
+        this.stage =
+            this.app.stage;
+
+        /*
+         * Explicitly keep the stage at the logical origin.
+         */
+        this.stage.position.set(
+            0,
+            0
+        );
+
+        this.stage.scale.set(
+            1,
+            1
+        );
+
+        /*
+         * Create rendering layers.
+         */
+        this.layers.background =
+            new PIXI.Container();
+
+        this.layers.environment =
+            new PIXI.Container();
+
+        this.layers.obstacles =
+            new PIXI.Container();
+
+        this.layers.pancake =
+            new PIXI.Container();
+
+        this.layers.particles =
+            new PIXI.Container();
+
+        this.layers.effects =
+            new PIXI.Container();
+
+        this.layers.ui =
+            new PIXI.Container();
+
+        /*
+         * Explicit rendering order.
+         */
+        this.layers.background.zIndex =
+            0;
+
+        this.layers.environment.zIndex =
+            10;
+
+        this.layers.obstacles.zIndex =
+            20;
+
+        this.layers.pancake.zIndex =
+            30;
+
+        this.layers.particles.zIndex =
+            40;
+
+        this.layers.effects.zIndex =
+            50;
+
+        this.layers.ui.zIndex =
+            100;
+
+        this.stage.sortableChildren =
+            true;
+
+        /*
+         * Add the layers to the stage.
+         */
+        this.stage.addChild(
+            this.layers.background
+        );
+
+        this.stage.addChild(
+            this.layers.environment
+        );
+
+        this.stage.addChild(
+            this.layers.obstacles
+        );
+
+        this.stage.addChild(
+            this.layers.pancake
+        );
+
+        this.stage.addChild(
+            this.layers.particles
+        );
+
+        this.stage.addChild(
+            this.layers.effects
+        );
+
+        this.stage.addChild(
+            this.layers.ui
+        );
+
+        /*
+         * Keep the presentation size synchronized with the
+         * browser without changing the game's logical size.
+         */
+        this.handleResize();
+
+        /*
+         * Store listener references so they can be removed.
+         */
+        this.resizeHandler = () => {
+            this.handleResize();
+        };
+
+        this.orientationHandler = () => {
+            this.handleResize();
+        };
+
+        window.addEventListener(
+            'resize',
+            this.resizeHandler,
+            {
+                passive: true
+            }
+        );
+
+        window.addEventListener(
+            'orientationchange',
+            this.orientationHandler,
+            {
+                passive: true
+            }
+        );
+
+        this.initialized =
+            true;
+
+        console.log(
+            'PixiJS renderer initialized:',
+            `${CONFIG.canvasWidth}x${CONFIG.canvasHeight}`,
+            `@ ${resolution}x`
+        );
     },
 
+    // --------------------------------------------------------
+    // UPDATE
+    // --------------------------------------------------------
+
+    update() {
+        // PixiJS owns actual rendering.
+        // Compatibility hook for Game.render loop.
+    },
+
+    // --------------------------------------------------------
+    // RESIZE
+    // --------------------------------------------------------
+
+    handleResize() {
+
+        if (
+            !this.app ||
+            !this.stage
+        ) {
+            return;
+        }
+
+        /*
+         * IMPORTANT:
+         *
+         * Do not change:
+         *
+         * this.app.renderer.width
+         * this.app.renderer.height
+         * this.stage.scale
+         * this.stage.position
+         *
+         * The game always exists in its fixed logical
+         * coordinate system.
+         *
+         * CSS scales the canvas to fit the game container.
+         */
+
+        this.stage.position.set(
+            0,
+            0
+        );
+
+        this.stage.scale.set(
+            1,
+            1
+        );
+    },
+
+    // --------------------------------------------------------
+    // GRAPHICS
+    // --------------------------------------------------------
+
     createGraphics() {
+
         return new PIXI.Graphics();
     },
 
+    // --------------------------------------------------------
+    // CLEAR LAYER
+    // --------------------------------------------------------
+
     clearLayer(layerName) {
-        const layer = this.layers[layerName];
+
+        const layer =
+            this.layers[layerName];
 
         if (!layer) {
             return;
         }
 
-        // Remove all children from the requested layer.
-        layer.removeChildren();
+        /*
+         * Copy children first because the collection changes
+         * as children are removed.
+         */
+        const children =
+            [...layer.children];
 
-        // Destroy old graphics belonging to the layer.
-        if (layerName === 'environment') {
-            this.graphics.environment.forEach(graphic => {
-                if (graphic && !graphic.destroyed) {
-                    graphic.destroy({
+        children.forEach(
+            child => {
+
+                if (
+                    child &&
+                    child.parent === layer
+                ) {
+
+                    layer.removeChild(
+                        child
+                    );
+                }
+
+                if (
+                    child &&
+                    !child.destroyed
+                ) {
+
+                    child.destroy({
                         children: true
                     });
                 }
-            });
+            }
+        );
 
-            this.graphics.environment.clear();
-        }
+        /*
+         * Clear renderer references.
+         */
+        switch (layerName) {
 
-        if (layerName === 'obstacles') {
-            this.graphics.obstacles.forEach(graphic => {
-                if (graphic && !graphic.destroyed) {
-                    graphic.destroy({
-                        children: true
-                    });
-                }
-            });
+            case 'environment':
 
-            this.graphics.obstacles.clear();
-        }
+                this.graphics.environment.clear();
 
-        if (layerName === 'pancake') {
-            this.graphics.pancake = null;
-        }
+                break;
 
-        if (layerName === 'particles') {
-            this.graphics.particles = [];
+            case 'obstacles':
+
+                this.graphics.obstacles.clear();
+
+                break;
+
+            case 'pancake':
+
+                this.graphics.pancake =
+                    null;
+
+                break;
         }
     },
 
-    addToLayer(layerName, graphics, key = null) {
-        const layer = this.layers[layerName];
+    // --------------------------------------------------------
+    // ADD TO LAYER
+    // --------------------------------------------------------
 
-        if (!layer || !graphics) {
-            return;
+    addToLayer(
+        layerName,
+        displayObject,
+        key = null
+    ) {
+
+        const layer =
+            this.layers[layerName];
+
+        if (
+            !layer ||
+            !displayObject
+        ) {
+            return null;
         }
 
-        layer.addChild(graphics);
+        layer.addChild(
+            displayObject
+        );
 
         if (key) {
-            if (layerName === 'environment') {
-                this.graphics.environment.set(key, graphics);
+
+            if (
+                layerName ===
+                'environment'
+            ) {
+
+                this.graphics.environment.set(
+                    key,
+                    displayObject
+                );
             }
 
-            if (layerName === 'obstacles') {
-                this.graphics.obstacles.set(key, graphics);
+            if (
+                layerName ===
+                'obstacles'
+            ) {
+
+                this.graphics.obstacles.set(
+                    key,
+                    displayObject
+                );
+            }
+
+            if (
+                layerName ===
+                'pancake'
+            ) {
+
+                this.graphics.pancake =
+                    displayObject;
             }
         }
+
+        return displayObject;
     },
 
-    removeFromLayer(layerName, key) {
-        const layer = this.layers[layerName];
+    // --------------------------------------------------------
+    // REMOVE FROM LAYER
+    // --------------------------------------------------------
 
-        if (!layer || !key) {
+    removeFromLayer(
+        layerName,
+        key
+    ) {
+
+        const layer =
+            this.layers[layerName];
+
+        if (
+            !layer ||
+            !key
+        ) {
             return;
         }
 
-        let graphics = null;
+        let displayObject =
+            null;
 
-        if (layerName === 'environment') {
-            graphics = this.graphics.environment.get(key);
+        switch (layerName) {
 
-            if (graphics) {
-                this.graphics.environment.delete(key);
-            }
+            case 'environment':
+
+                displayObject =
+                    this.graphics.environment.get(
+                        key
+                    );
+
+                this.graphics.environment.delete(
+                    key
+                );
+
+                break;
+
+            case 'obstacles':
+
+                displayObject =
+                    this.graphics.obstacles.get(
+                        key
+                    );
+
+                this.graphics.obstacles.delete(
+                    key
+                );
+
+                break;
         }
 
-        if (layerName === 'obstacles') {
-            graphics = this.graphics.obstacles.get(key);
-
-            if (graphics) {
-                this.graphics.obstacles.delete(key);
-            }
+        if (!displayObject) {
+            return;
         }
 
-        if (graphics) {
-            if (graphics.parent === layer) {
-                layer.removeChild(graphics);
-            }
+        if (
+            displayObject.parent ===
+            layer
+        ) {
 
-            if (!graphics.destroyed) {
-                graphics.destroy({
-                    children: true
-                });
-            }
+            layer.removeChild(
+                displayObject
+            );
+        }
+
+        if (
+            !displayObject.destroyed
+        ) {
+
+            displayObject.destroy({
+                children: true
+            });
         }
     },
+
+    // --------------------------------------------------------
+    // CLEAR EVERYTHING
+    // --------------------------------------------------------
 
     clearAllLayers() {
-        Object.keys(this.layers).forEach(layerName => {
-            this.clearLayer(layerName);
-        });
+
+        Object.keys(
+            this.layers
+        ).forEach(
+            layerName => {
+
+                this.clearLayer(
+                    layerName
+                );
+            }
+        );
+
+        /*
+         * Make absolutely sure renderer references are
+         * reset as well.
+         */
+        this.graphics.environment.clear();
+        this.graphics.obstacles.clear();
+        this.graphics.pancake = null;
     },
 
-    update() {
-        if (!this.app || !this.stage) {
+    // --------------------------------------------------------
+    // DESTROY
+    // --------------------------------------------------------
+
+    destroy() {
+
+        if (!this.app) {
             return;
         }
 
         /*
-         * Pixi's Application normally has its own ticker.
-         * The existing game architecture explicitly calls Renderer.update(),
-         * so we keep this method for compatibility.
-         *
-         * We only render manually when auto rendering is disabled.
+         * Remove listeners using stored references.
          */
-        if (this.app.renderer) {
-            this.app.renderer.render(this.stage);
+        if (this.resizeHandler) {
+            window.removeEventListener(
+                'resize',
+                this.resizeHandler
+            );
+            this.resizeHandler = null;
         }
+
+        if (this.orientationHandler) {
+            window.removeEventListener(
+                'orientationchange',
+                this.orientationHandler
+            );
+            this.orientationHandler = null;
+        }
+
+        this.clearAllLayers();
+
+        if (this.app) {
+
+            this.app.destroy(
+                true,
+                {
+                    children: true
+                }
+            );
+        }
+
+        this.app = null;
+        this.stage = null;
+
+        this.layers.background = null;
+        this.layers.environment = null;
+        this.layers.obstacles = null;
+        this.layers.pancake = null;
+        this.layers.particles = null;
+        this.layers.effects = null;
+        this.layers.ui = null;
+
+        this.initialized = false;
     }
 };
 
