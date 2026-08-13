@@ -1,4 +1,4 @@
-// Input Handling - Attached to Pixi Canvas
+// Input Handling - Safe
 const Input = {
     isCharging: false,
     chargePower: 0,
@@ -15,25 +15,27 @@ const Input = {
             this.chargeInterval = null;
         }
 
-        // Use the Pixi canvas for input
-        const view = Renderer.app.view;
-        view.addEventListener('mousedown', (e) => this.onPointerDown(e));
-        view.addEventListener('mouseup', (e) => this.onPointerUp(e));
-        view.addEventListener('mouseleave', (e) => this.onPointerUp(e));
-        view.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.onPointerDown(e);
-        }, { passive: false });
-        view.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.onPointerUp(e);
-        }, { passive: false });
-        view.addEventListener('touchcancel', (e) => {
-            e.preventDefault();
-            this.onPointerUp(e);
-        }, { passive: false });
-
-        console.log('Input initialized on Pixi canvas');
+        const view = Renderer.app ? Renderer.app.view : null;
+        if (view) {
+            view.addEventListener('mousedown', (e) => this.onPointerDown(e));
+            view.addEventListener('mouseup', (e) => this.onPointerUp(e));
+            view.addEventListener('mouseleave', (e) => this.onPointerUp(e));
+            view.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.onPointerDown(e);
+            }, { passive: false });
+            view.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.onPointerUp(e);
+            }, { passive: false });
+            view.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                this.onPointerUp(e);
+            }, { passive: false });
+            console.log('Input initialized on Pixi canvas');
+        } else {
+            console.warn('Renderer.app not available, input not attached');
+        }
     },
 
     onPointerDown(e) {
