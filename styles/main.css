@@ -224,6 +224,12 @@ button {
     white-space: nowrap;
 }
 
+.best-flips {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-left: 6px;
+}
+
 /* ============================================================
    Floating messages
    ============================================================ */
@@ -487,6 +493,13 @@ button {
     text-align: center;
 
     animation: menuCardIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.menu-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 60px rgba(92, 58, 30, 0.2);
 }
 
 .menu-pancake {
@@ -607,7 +620,7 @@ button {
 }
 
 #startButton:hover {
-    filter: brightness(1.04);
+    filter: brightness(1.05);
 }
 
 #startButton:active {
@@ -663,6 +676,24 @@ button {
 }
 
 /* ============================================================
+   Fullscreen button
+   ============================================================ */
+
+#fullscreen-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+#fullscreen-btn:hover {
+    transform: scale(1.1);
+    background: rgba(255, 252, 246, 1);
+}
+#fullscreen-btn:active {
+    transform: scale(0.9);
+}
+
+/* ============================================================
    Animations
    ============================================================ */
 
@@ -690,6 +721,39 @@ button {
         transform:
             translateY(-7px)
             rotate(4deg);
+    }
+}
+
+/* ============================================================
+   High contrast mode
+   ============================================================ */
+
+@media (prefers-contrast: high) {
+    :root {
+        --cream: #fff;
+        --cream-dark: #f0e0d0;
+        --brown: #2a1a0a;
+        --brown-soft: #4a3020;
+        --orange: #d9802a;
+        --orange-dark: #a85a1a;
+        --gold: #e8b030;
+        --ui-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        --button-shadow: 0 4px 0 #8a4a1a, 0 6px 12px rgba(0,0,0,0.3);
+    }
+    #game {
+        border-color: #333;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .menu-card {
+        border-color: #333;
+        background: #fff;
+    }
+    #startButton {
+        background: #d9802a;
+        box-shadow: 0 4px 0 #8a4a1a;
+    }
+    .charge-track {
+        background: rgba(0,0,0,0.3);
     }
 }
 
@@ -754,6 +818,10 @@ button {
     }
 }
 
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -762,4 +830,19 @@ button {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+/* ============================================================
+   Custom scrollbar (global)
+   ============================================================ */
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--cream-dark);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--orange);
+    border-radius: 3px;
 }

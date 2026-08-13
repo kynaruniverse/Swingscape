@@ -52,6 +52,13 @@ const Game = {
     resultTimer: null,
 
     // --------------------------------------------------------
+    // LEVEL & PROGRESSION
+    // --------------------------------------------------------
+
+    level: 1,
+    flipsInLevel: 0,
+
+    // --------------------------------------------------------
     // INITIALISE
     // --------------------------------------------------------
 
@@ -127,6 +134,12 @@ const Game = {
         UI.init();
 
         // ----------------------------------------------------
+        // AUDIO
+        // ----------------------------------------------------
+
+        AudioManager.init();
+
+        // ----------------------------------------------------
         // INITIAL STATE
         // ----------------------------------------------------
 
@@ -135,6 +148,10 @@ const Game = {
         this.accumulator = 0;
 
         this.lastFrameTime = 0;
+
+        this.level = 1;
+
+        this.flipsInLevel = 0;
 
         this.initialized = true;
 
@@ -172,12 +189,19 @@ const Game = {
 
         this.reset();
 
+        // Show tutorial if not shown
+        if (!UI.tutorialShown) {
+            UI.showTutorial();
+        }
+
         this.state = 'playing';
 
         this.lastFrameTime =
             performance.now();
 
         this.accumulator = 0;
+
+        this.flipsInLevel = 0;
 
         UI.setPlayingUI();
 
@@ -237,6 +261,11 @@ const Game = {
         Obstacles.init();
 
         /*
+         * Apply level difficulty scaling
+         */
+        this.applyLevelDifficulty();
+
+        /*
          * Rebuild environment visuals so they correspond
          * to the newly created obstacle bodies.
          */
@@ -264,13 +293,27 @@ const Game = {
             Pancake.flipCount
         );
 
-        UI.updateLevel(1);
+        UI.updateLevel(this.level);
 
         UI.hideCharge();
 
         console.log(
             'Game reset complete.'
         );
+    },
+
+    // --------------------------------------------------------
+    // LEVEL DIFFICULTY
+    // --------------------------------------------------------
+
+    applyLevelDifficulty() {
+        const plateBody = Obstacles.items.find(item => item.label === 'plate');
+        if (plateBody) {
+            const baseX = CONFIG.canvasWidth - 75;
+            const offset = Math.sin(this.level * 0.5) * 20;
+            Matter.Body.setPosition(plateBody, { x: baseX + offset, y: plateBody.position.y });
+        }
+        // Additional difficulty: slightly more gravity? Not needed.
     },
 
     // --------------------------------------------------------
@@ -389,6 +432,16 @@ const Game = {
 
         Input.cleanup();
 
+        // Increment level
+        this.level++;
+        this.flipsInLevel = Pancake.flipCount;
+
+        // Update best flips
+        UI.updateBestFlipsIfNeeded(Pancake.flipCount);
+
+        // Play win sound
+        if (AudioManager) AudioManager.win();
+
         const plate =
             Obstacles.items.find(
                 item =>
@@ -405,7 +458,7 @@ const Game = {
 
         UI.showMessage(
             'PERFECT LANDING! 🎉🥞',
-            999999
+            3000
         );
 
         /*
@@ -427,8 +480,13 @@ const Game = {
                 }
 
                 UI.setRestartScreen();
-
-                UI.showOverlay();
+                // Update description to show level
+                const desc = document.querySelector('.menu-description');
+                if (desc) {
+                    desc.textContent = `Level ${this.level} – Keep flipping!`;
+                }
+                UI.showOverlay(true);
+                UI.updateLevel(this.level);
 
             }, 1400);
     },
@@ -456,6 +514,8 @@ const Game = {
         Input.cleanup();
 
         UI.hideCharge();
+
+        if (AudioManager) AudioManager.lose();
 
         UI.showMessage(
             'OH NO! THE PANCAKE FELL! 🥞',

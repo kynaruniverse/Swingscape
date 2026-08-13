@@ -19,6 +19,14 @@ const Input = {
 
     initialized: false,
 
+    // Keyboard state
+    keyboardDown: false,
+    keyboardActive: false,
+
+    // Trajectory guide
+    trajectoryGraphics: null,
+    showTrajectory: false,
+
     // --------------------------------------------------------
     // BOUND EVENT HANDLERS
     //
@@ -30,7 +38,9 @@ const Input = {
         pointerdown: null,
         pointerup: null,
         pointercancel: null,
-        lostpointercapture: null
+        lostpointercapture: null,
+        keydown: null,
+        keyup: null
     },
 
     // --------------------------------------------------------
@@ -113,6 +123,58 @@ const Input = {
 
         view.style.touchAction = 'none';
 
+        // ----------------------------------------------------
+        // Keyboard listeners
+        // ----------------------------------------------------
+
+        this.handlers.keydown = (e) => {
+            if (e.key === ' ' || e.key === 'Space') {
+                e.preventDefault();
+                if (!this.keyboardDown && Game.state === 'playing') {
+                    this.keyboardDown = true;
+                    this.keyboardActive = true;
+                    // Simulate pointer down
+                    this.onPointerDown({
+                        pointerType: 'keyboard',
+                        button: 0,
+                        currentTarget: view,
+                        preventDefault: () => {}
+                    });
+                }
+            }
+        };
+
+        this.handlers.keyup = (e) => {
+            if (e.key === ' ' || e.key === 'Space') {
+                e.preventDefault();
+                if (this.keyboardDown) {
+                    this.keyboardDown = false;
+                    this.keyboardActive = false;
+                    // Simulate pointer up
+                    this.onPointerUp({
+                        pointerType: 'keyboard',
+                        button: 0,
+                        currentTarget: view,
+                        preventDefault: () => {}
+                    });
+                }
+            }
+        };
+
+        document.addEventListener('keydown', this.handlers.keydown);
+        document.addEventListener('keyup', this.handlers.keyup);
+
+        // ----------------------------------------------------
+        // Trajectory graphics
+        // ----------------------------------------------------
+
+        if (!this.trajectoryGraphics) {
+            this.trajectoryGraphics = new PIXI.Graphics();
+            Renderer.layers.effects.addChild(this.trajectoryGraphics);
+            this.trajectoryGraphics.zIndex = 35;
+            this.trajectoryGraphics.visible = false;
+        }
+
         this.initialized = true;
 
         console.log(
@@ -131,40 +193,28 @@ const Input = {
                 ? Renderer.app.view
                 : null;
 
-        if (!view) {
-            return;
+        if (view) {
+            if (this.handlers.pointerdown) {
+                view.removeEventListener('pointerdown', this.handlers.pointerdown);
+            }
+            if (this.handlers.pointerup) {
+                view.removeEventListener('pointerup', this.handlers.pointerup);
+            }
+            if (this.handlers.pointercancel) {
+                view.removeEventListener('pointercancel', this.handlers.pointercancel);
+            }
+            if (this.handlers.lostpointercapture) {
+                view.removeEventListener('lostpointercapture', this.handlers.lostpointercapture);
+            }
         }
 
-        if (this.handlers.pointerdown) {
-
-            view.removeEventListener(
-                'pointerdown',
-                this.handlers.pointerdown
-            );
+        if (this.handlers.keydown) {
+            document.removeEventListener('keydown', this.handlers.keydown);
+            this.handlers.keydown = null;
         }
-
-        if (this.handlers.pointerup) {
-
-            view.removeEventListener(
-                'pointerup',
-                this.handlers.pointerup
-            );
-        }
-
-        if (this.handlers.pointercancel) {
-
-            view.removeEventListener(
-                'pointercancel',
-                this.handlers.pointercancel
-            );
-        }
-
-        if (this.handlers.lostpointercapture) {
-
-            view.removeEventListener(
-                'lostpointercapture',
-                this.handlers.lostpointercapture
-            );
+        if (this.handlers.keyup) {
+            document.removeEventListener('keyup', this.handlers.keyup);
+            this.handlers.keyup = null;
         }
 
         this.handlers.pointerdown = null;
@@ -263,6 +313,9 @@ const Input = {
 
             }
         }
+
+        // Show trajectory
+        this.showTrajectory = true;
     },
 
     // --------------------------------------------------------
@@ -354,6 +407,13 @@ const Input = {
 
         this.isCharging = false;
 
+        // Hide trajectory
+        this.showTrajectory = false;
+        if (this.trajectoryGraphics) {
+            this.trajectoryGraphics.visible = false;
+            this.trajectoryGraphics.clear();
+        }
+
         /*
          * Release pointer capture if possible.
          */
@@ -438,6 +498,13 @@ const Input = {
         }
 
         this.isCharging = false;
+
+        // Hide trajectory
+        this.showTrajectory = false;
+        if (this.trajectoryGraphics) {
+            this.trajectoryGraphics.visible = false;
+            this.trajectoryGraphics.clear();
+        }
 
         if (
             view &&
@@ -553,6 +620,81 @@ const Input = {
          */
 
         this.updateCharge();
+
+        // Update trajectory if charging
+        if (this.isCharging && this.showTrajectory) {
+            this.updateTrajectory();
+        }
+    },
+
+    // --------------------------------------------------------
+    // TRAJECTORY GUIDE
+    // --------------------------------------------------------
+
+    updateTrajectory() {
+
+        const pancake = Pancake.body;
+        if (!pancake) return;
+
+        const power = this.chargePower / CONFIG.gameplay.flip.maxPower;
+        const normalizedPower = Math.max(0, Math.min(1, power));
+
+        // Calculate launch velocity based on current power
+        const upward = -(
+            CONFIG.gameplay.flip.upwardVelocityMin +
+            normalizedPower * (
+                CONFIG.gameplay.flip.upwardVelocityMax -
+                CONFIG.gameplay.flip.upwardVelocityMin
+            )
+        );
+        const forward = CONFIG.gameplay.flip.forwardVelocityMin +
+            normalizedPower * (
+                CONFIG.gameplay.flip.forwardVelocityMax -
+                CONFIG.gameplay.flip.forwardVelocityMin
+            );
+
+        const startX = pancake.position.x;
+        const startY = pancake.position.y;
+        const g = CONFIG.physics.gravity.y;
+
+        // Simple projectile simulation (no air friction)
+        const steps = 30;
+        const dt = 0.05;
+        const points = [];
+        let vx = forward;
+        let vy = upward;
+        let x = startX;
+        let y = startY;
+
+        for (let i = 0; i < steps; i++) {
+            x += vx * dt;
+            y += vy * dt;
+            vy += g * dt;
+            if (y > CONFIG.canvasHeight) break;
+            points.push({ x, y });
+        }
+
+        // Draw dashed line
+        const gfx = this.trajectoryGraphics;
+        gfx.clear();
+        gfx.lineStyle(2, 0xffdd88, 0.6);
+        gfx.moveTo(startX, startY);
+        for (let i = 0; i < points.length; i++) {
+            if (i % 2 === 0) {
+                gfx.lineTo(points[i].x, points[i].y);
+            } else {
+                gfx.moveTo(points[i].x, points[i].y);
+            }
+        }
+        // Draw small circles at each point
+        gfx.beginFill(0xffdd88, 0.3);
+        points.forEach((p, idx) => {
+            if (idx % 2 === 0) {
+                gfx.drawCircle(p.x, p.y, 2);
+            }
+        });
+        gfx.endFill();
+        this.trajectoryGraphics.visible = true;
     },
 
     // --------------------------------------------------------
@@ -590,6 +732,15 @@ const Input = {
         this.lastChargeTime = 0;
 
         this.activePointerId = null;
+
+        this.keyboardDown = false;
+        this.keyboardActive = false;
+
+        this.showTrajectory = false;
+        if (this.trajectoryGraphics) {
+            this.trajectoryGraphics.visible = false;
+            this.trajectoryGraphics.clear();
+        }
 
         /*
          * Phase 7.5:

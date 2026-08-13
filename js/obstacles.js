@@ -7,6 +7,8 @@ const Obstacles = {
 
     items: [],
 
+    plateGlow: null, // for pulsing animation
+
     // --------------------------------------------------------
     // INITIALISE
     // --------------------------------------------------------
@@ -239,7 +241,7 @@ const Obstacles = {
     },
 
     // --------------------------------------------------------
-    // PLATE GRAPHIC
+    // PLATE GRAPHIC (enhanced with glow)
     // --------------------------------------------------------
 
     drawPlateGraphic(g, item) {
@@ -265,6 +267,17 @@ const Obstacles = {
         );
 
         g.endFill();
+
+        /*
+         * Glow effect (pulsing).
+         */
+
+        const glow = new PIXI.Graphics();
+        glow.beginFill(0xffffff, 0.15);
+        glow.drawEllipse(0, 0, width / 2 + 20, 20);
+        glow.endFill();
+        g.addChild(glow);
+        this.plateGlow = glow;
 
         /*
          * Plate.
@@ -974,6 +987,14 @@ const Obstacles = {
             graphic.rotation =
                 item.angle || 0;
         });
+
+        // Pulse plate glow
+        if (this.plateGlow && this.plateGlow.parent) {
+            const time = performance.now() / 1000;
+            const pulse = 0.5 + 0.5 * Math.sin(time * 1.5);
+            this.plateGlow.alpha = 0.1 + 0.15 * pulse;
+            this.plateGlow.scale.set(1 + 0.05 * pulse);
+        }
     },
 
     // --------------------------------------------------------
@@ -995,6 +1016,8 @@ const Obstacles = {
         Renderer.clearLayer(
             'obstacles'
         );
+
+        this.plateGlow = null;
     }
 };
 

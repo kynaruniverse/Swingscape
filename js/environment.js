@@ -11,6 +11,7 @@
 // • Decorative kitchen details
 // • Counter presentation
 // • Ambient dust
+// • Steam above griddle
 //
 // IMPORTANT:
 //
@@ -42,6 +43,9 @@ const Environment = {
 
         dustMotes: []
     },
+
+    // Steam particles
+    steamParticles: [],
 
     // --------------------------------------------------------
     // INITIALISE
@@ -84,6 +88,8 @@ const Environment = {
             dustMotes: []
         };
 
+        this.steamParticles = [];
+
         this.drawBackground();
 
         this.drawKitchenWall();
@@ -93,6 +99,8 @@ const Environment = {
         this.drawCounter();
 
         this.createDustMotes();
+
+        this.createSteam();
 
         console.log(
             'Environment initialized.'
@@ -803,6 +811,38 @@ const Environment = {
     },
 
     // ========================================================
+    // STEAM
+    // ========================================================
+
+    createSteam() {
+        const griddle = Obstacles.items.find(item => item.label === 'griddle');
+        if (!griddle) return;
+        const gx = griddle.position.x;
+        const gy = griddle.position.y;
+
+        for (let i = 0; i < 6; i++) {
+            const steam = new PIXI.Graphics();
+            const radius = 5 + Math.random() * 8;
+            steam.beginFill(0xffffff, 0.15);
+            steam.drawCircle(0, 0, radius);
+            steam.endFill();
+            steam.x = gx + (Math.random() - 0.5) * 40;
+            steam.y = gy - 10 - Math.random() * 20;
+            steam.alpha = 0.2 + Math.random() * 0.2;
+            this.steamParticles.push({
+                graphic: steam,
+                baseX: steam.x,
+                baseY: steam.y,
+                speed: 0.2 + Math.random() * 0.3,
+                drift: (Math.random() - 0.5) * 0.5,
+                scale: 0.8 + Math.random() * 0.6,
+                phase: Math.random() * 100
+            });
+            Renderer.layers.environment.addChild(steam);
+        }
+    },
+
+    // ========================================================
     // UPDATE
     // ========================================================
 
@@ -861,6 +901,16 @@ const Environment = {
                     0.2;
             }
         );
+
+        // Steam animation
+        this.steamParticles.forEach(p => {
+            const yOff = Math.sin(time * p.speed + p.phase) * 8;
+            const xOff = Math.cos(time * p.drift + p.phase) * 6;
+            p.graphic.x = p.baseX + xOff;
+            p.graphic.y = p.baseY - Math.abs(yOff) - 2;
+            p.graphic.alpha = 0.15 + 0.1 * Math.sin(time * p.speed + p.phase);
+            p.graphic.scale.set(p.scale * (0.9 + 0.2 * Math.sin(time * p.speed + p.phase)));
+        });
     }
 };
 

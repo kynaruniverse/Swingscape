@@ -35,6 +35,9 @@
 
     <title>Pancake Plop! 🥞</title>
 
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
     <link
         rel="stylesheet"
         href="styles/main.css"
@@ -296,24 +299,27 @@
          ============================================================= -->
 
     <script src="js/config.js"></script>
-
+    <script src="js/audio.js"></script>
     <script src="js/particles.js"></script>
-
     <script src="js/physics.js"></script>
-
     <script src="js/renderer.js"></script>
-
     <script src="js/pancake.js"></script>
-
     <script src="js/obstacles.js"></script>
-
     <script src="js/environment.js"></script>
-
     <script src="js/input.js"></script>
-
     <script src="js/ui.js"></script>
-
     <script src="js/game.js"></script>
+
+    <script>
+        // Keyboard focus management: allow canvas to receive focus programmatically
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.querySelector('#pixi-container canvas');
+            if (canvas) {
+                canvas.setAttribute('tabindex', '0');
+                canvas.addEventListener('focus', () => { /* optional */ });
+            }
+        });
+    </script>
 
 </body>
 </html>

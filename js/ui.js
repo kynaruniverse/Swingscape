@@ -55,6 +55,15 @@ const UI = {
 
     initialized: false,
 
+    // Tutorial
+    tutorialShown: false,
+
+    // Best flips
+    bestFlips: 0,
+
+    // Fullscreen
+    fullscreenButton: null,
+
     // --------------------------------------------------------
     // INITIALISE
     // --------------------------------------------------------
@@ -150,6 +159,23 @@ const UI = {
 
         this.setStartScreen();
 
+        // Load best flips from localStorage
+        this.bestFlips = parseInt(localStorage.getItem('pancakePlopBestFlips')) || 0;
+        this.updateBestFlips();
+
+        // Tutorial flag
+        this.tutorialShown = localStorage.getItem('pancakePlopTutorialShown') === 'true';
+
+        // Fullscreen button
+        this.createFullscreenButton();
+
+        // Bind fullscreen change
+        document.addEventListener('fullscreenchange', () => this.updateFullscreenButton());
+
+        // Audio resume on any interaction
+        document.addEventListener('pointerdown', () => { if (AudioManager) AudioManager.resume(); });
+        document.addEventListener('keydown', () => { if (AudioManager) AudioManager.resume(); });
+
         this.initialized = true;
 
         console.log(
@@ -239,10 +265,14 @@ const UI = {
     // OVERLAY
     // --------------------------------------------------------
 
-    showOverlay() {
+    showOverlay(smooth = false) {
 
         if (!this.overlay) {
             return;
+        }
+
+        if (smooth) {
+            this.overlay.style.transition = 'opacity 0.6s ease, visibility 0.6s ease';
         }
 
         this.overlay.classList.remove(
@@ -256,10 +286,14 @@ const UI = {
         }
     },
 
-    hideOverlay() {
+    hideOverlay(smooth = false) {
 
         if (!this.overlay) {
             return;
+        }
+
+        if (smooth) {
+            this.overlay.style.transition = 'opacity 0.6s ease, visibility 0.6s ease';
         }
 
         this.overlay.classList.add(
@@ -340,7 +374,7 @@ const UI = {
         if (this.menuDescription) {
 
             this.menuDescription.textContent =
-                'Ready for another flip? Try to beat your best run.';
+                `Level ${Game.level || 1} – Ready for another flip? Try to beat your best run.`;
         }
 
         if (!this.startButton) {
@@ -470,6 +504,34 @@ const UI = {
 
             this.flipCounter.textContent =
                 `🥞 Flips: ${safeCount}`;
+        }
+
+        // Update best flips
+        this.updateBestFlipsIfNeeded(safeCount);
+    },
+
+    // --------------------------------------------------------
+    // BEST FLIPS
+    // --------------------------------------------------------
+
+    updateBestFlips() {
+        const flipPill = document.getElementById('flip-counter');
+        if (!flipPill) return;
+        let bestEl = flipPill.querySelector('.best-flips');
+        if (!bestEl) {
+            bestEl = document.createElement('span');
+            bestEl.className = 'best-flips';
+            bestEl.style.cssText = 'font-size: 10px; opacity: 0.6; margin-left: 6px;';
+            flipPill.appendChild(bestEl);
+        }
+        bestEl.textContent = `🏆 ${this.bestFlips}`;
+    },
+
+    updateBestFlipsIfNeeded(flips) {
+        if (flips > this.bestFlips) {
+            this.bestFlips = flips;
+            localStorage.setItem('pancakePlopBestFlips', String(this.bestFlips));
+            this.updateBestFlips();
         }
     },
 
@@ -651,7 +713,7 @@ const UI = {
 
     setPlayingUI() {
 
-        this.hideOverlay();
+        this.hideOverlay(true);
 
         this.hideMessage();
 
@@ -670,12 +732,14 @@ const UI = {
 
         this.showMessage(
             'PERFECT LANDING! 🎉',
-            2500
+            3000
         );
 
-        this.setRestartScreen();
-
-        this.showOverlay();
+        // Show overlay with smooth transition
+        setTimeout(() => {
+            this.setRestartScreen();
+            this.showOverlay(true);
+        }, 1200);
     },
 
     // --------------------------------------------------------
@@ -693,7 +757,112 @@ const UI = {
             1800
         );
 
-        this.showOverlay();
+        this.showOverlay(true);
+    },
+
+    // --------------------------------------------------------
+    // TUTORIAL
+    // --------------------------------------------------------
+
+    showTutorial() {
+        if (this.tutorialShown) return;
+        this.tutorialShown = true;
+        localStorage.setItem('pancakePlopTutorialShown', 'true');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'tutorial-overlay';
+        overlay.style.cssText = `
+            position: absolute; inset: 0; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
+            animation: fadeIn 0.3s ease;
+            pointer-events: auto;
+        `;
+        const card = document.createElement('div');
+        card.style.cssText = `
+            max-width: 280px; padding: 24px; border-radius: 24px;
+            background: rgba(255,252,247,0.95); text-align: center;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+        `;
+        card.innerHTML = `
+            <h2 style="font-size: 24px; margin: 0 0 8px;">🥞 Important!</h2>
+            <p style="font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
+                Land <strong>face‑up</strong> on the plate to win!<br>
+                If you land face‑down, it's a fail.
+            </p>
+            <p style="font-size: 13px; color: #8b6748; margin-bottom: 16px;">
+                Hold anywhere to charge, release to flip.
+            </p>
+            <button id="tutorial-ok" style="
+                background: #ffbb72; border: none; border-radius: 18px;
+                padding: 12px 32px; font-weight: 900; font-size: 16px;
+                color: white; cursor: pointer; box-shadow: 0 4px 0 #c96d27;
+            ">Got it!</button>
+        `;
+        overlay.appendChild(card);
+        document.getElementById('ui-container').appendChild(overlay);
+
+        document.getElementById('tutorial-ok').addEventListener('click', () => {
+            overlay.remove();
+        });
+    },
+
+    // --------------------------------------------------------
+    // CONTROLS HINT
+    // --------------------------------------------------------
+
+    showControlsHint(flipCount) {
+        if (flipCount === 1 && !this.tutorialShown) {
+            this.showMessage('💡 Hold to charge, release to flip!', 2000);
+        }
+    },
+
+    // --------------------------------------------------------
+    // FULLSCREEN
+    // --------------------------------------------------------
+
+    createFullscreenButton() {
+        const btn = document.createElement('button');
+        btn.id = 'fullscreen-btn';
+        btn.textContent = '⛶';
+        btn.style.cssText = `
+            position: absolute; top: 16px; right: 16px; z-index: 30;
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.6);
+            background: rgba(255,252,246,0.85);
+            backdrop-filter: blur(4px);
+            font-size: 20px; color: #5c3a1e;
+            cursor: pointer; touch-action: manipulation;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        `;
+        btn.addEventListener('click', () => this.toggleFullscreen());
+        const container = document.getElementById('ui-container');
+        if (container) container.appendChild(btn);
+        this.fullscreenButton = btn;
+
+        const check = () => {
+            btn.style.display = window.innerWidth > 768 ? 'flex' : 'none';
+        };
+        window.addEventListener('resize', check);
+        check();
+    },
+
+    toggleFullscreen() {
+        const el = document.getElementById('game');
+        if (!document.fullscreenElement) {
+            el.requestFullscreen?.() || el.webkitRequestFullscreen?.();
+        } else {
+            document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+        }
+    },
+
+    updateFullscreenButton() {
+        if (this.fullscreenButton) {
+            const isFull = !!document.fullscreenElement;
+            this.fullscreenButton.textContent = isFull ? '⛶' : '⛶';
+        }
     },
 
     // --------------------------------------------------------

@@ -154,7 +154,7 @@ const Particles = {
     createFlip(x, y) {
 
         const count =
-            CONFIG.particles.maxFlipParticles;
+            CONFIG.particles.maxFlipParticles + 5;
 
         for (
             let i = 0;
@@ -285,7 +285,7 @@ const Particles = {
 
 
     // --------------------------------------------------------
-    // WIN PARTICLES
+    // WIN PARTICLES (enhanced with confetti)
     // --------------------------------------------------------
 
     createWin(x, y) {
@@ -297,7 +297,11 @@ const Particles = {
             0x7bd88f,
             0x6bcfff,
             0xff9ff3,
-            0xffffff
+            0xffffff,
+            0xff6b6b,
+            0x4ecdc4,
+            0x45b7d1,
+            0xf9ca24
 
         ];
 
@@ -328,7 +332,10 @@ const Particles = {
                     )
                 ];
 
-            this.createParticle({
+            const size = 2 + Math.random() * 5;
+            const isSquare = Math.random() > 0.7;
+
+            const particle = this.createParticle({
 
                 x:
                     x +
@@ -340,10 +347,7 @@ const Particles = {
                     (Math.random() - 0.5) *
                     40,
 
-                radius:
-                    2 +
-                    Math.random() *
-                    4,
+                radius: isSquare ? size * 0.8 : size,
 
                 color,
 
@@ -357,16 +361,23 @@ const Particles = {
                     4,
 
                 gravity:
-                    CONFIG.particles.gravity,
+                    CONFIG.particles.gravity * 0.6,
 
                 life:
-                    CONFIG.particles.defaultLife +
-                    Math.random() *
-                    0.5,
+                    1.5 + Math.random() * 1.0,
 
                 fadeSpeed:
-                    CONFIG.particles.defaultFadeSpeed
+                    0.008 + Math.random() * 0.008
             });
+
+            if (particle && isSquare) {
+                // Make it a rectangle (confetti)
+                particle.clear();
+                particle.beginFill(color);
+                particle.drawRect(-size/2, -size/2, size, size);
+                particle.endFill();
+                particle.rotationSpeed = (Math.random() - 0.5) * 0.2;
+            }
         }
     },
 

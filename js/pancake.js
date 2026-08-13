@@ -59,6 +59,9 @@ const Pancake = {
 
     graphics: null,
 
+    // Danger zone graphics
+    dangerGraphics: null,
+
     // --------------------------------------------------------
     // INITIALISE
     // --------------------------------------------------------
@@ -178,6 +181,17 @@ const Pancake = {
 
         this.updateGraphics();
 
+        // ----------------------------------------------------
+        // DANGER ZONE GRAPHICS
+        // ----------------------------------------------------
+
+        if (!this.dangerGraphics) {
+            this.dangerGraphics = new PIXI.Graphics();
+            Renderer.layers.effects.addChild(this.dangerGraphics);
+            this.dangerGraphics.zIndex = 5;
+            this.dangerGraphics.visible = false;
+        }
+
         console.log(
             'Pancake initialized:',
             this.body.position.x,
@@ -186,7 +200,7 @@ const Pancake = {
     },
 
     // --------------------------------------------------------
-    // DRAW PANCAKE
+    // DRAW PANCAKE (always draw face)
     // --------------------------------------------------------
 
     drawPancakeGraphics() {
@@ -403,18 +417,10 @@ const Pancake = {
         }
 
         // ----------------------------------------------------
-        // FACE
+        // FACE - ALWAYS DRAWN
         // ----------------------------------------------------
 
-        if (
-            typeof Game !== 'undefined' &&
-            Game.state !== 'playing'
-        ) {
-            return;
-        }
-
         // Eyes
-
         g.beginFill(
             0x333333
         );
@@ -434,7 +440,6 @@ const Pancake = {
         g.endFill();
 
         // Eye highlights
-
         g.beginFill(
             0xffffff
         );
@@ -454,7 +459,6 @@ const Pancake = {
         g.endFill();
 
         // Cheeks
-
         g.beginFill(
             0xff9696,
             0.38
@@ -474,24 +478,13 @@ const Pancake = {
 
         g.endFill();
 
-        /*
-         * Mouth.
-         *
-         * Simple filled rectangle instead of stroke paths,
-         * because PixiJS v7 in this CDN build does not expose
-         * `g.stroke()`.
-         */
-
+        // Mouth
         g.beginFill(
             0x333333
         );
 
         if (this.isResting) {
 
-            /*
-             * Slightly curved smile shape:
-             * a small thin rounded rectangle.
-             */
             g.drawRoundedRect(
                 -6,
                 1,
@@ -502,9 +495,6 @@ const Pancake = {
 
         } else {
 
-            /*
-             * Neutral line mouth.
-             */
             g.drawRect(
                 -5,
                 3,
@@ -646,7 +636,20 @@ const Pancake = {
 
         this.flipCount++;
 
-        this.trailPositions = [];
+        // Track flips in game
+        if (typeof Game !== 'undefined') {
+            Game.flipsInLevel++;
+            UI.showControlsHint(Game.flipsInLevel);
+        }
+
+        // Play flip sound
+        if (AudioManager) AudioManager.flip();
+
+        // Hide danger zone
+        if (this.dangerGraphics) {
+            this.dangerGraphics.visible = false;
+            this.dangerGraphics.clear();
+        }
 
         // ----------------------------------------------------
         // PARTICLES
@@ -970,6 +973,25 @@ const Pancake = {
     renderUpdate() {
 
         this.updateGraphics();
+
+        // Danger zone: if pancake y > counterY + 100, show red warning
+        if (this.body && this.body.position.y > CONFIG.counterY + 100) {
+            if (this.dangerGraphics) {
+                this.dangerGraphics.visible = true;
+                this.dangerGraphics.clear();
+                const alpha = Math.min(1, (this.body.position.y - CONFIG.counterY - 100) / 100);
+                this.dangerGraphics.beginFill(0xff0000, alpha * 0.3);
+                this.dangerGraphics.drawRect(0, CONFIG.canvasHeight - 40, CONFIG.canvasWidth, 40);
+                this.dangerGraphics.endFill();
+                this.dangerGraphics.lineStyle(3, 0xff0000, alpha * 0.6);
+                this.dangerGraphics.drawRect(0, CONFIG.canvasHeight - 40, CONFIG.canvasWidth, 40);
+            }
+        } else {
+            if (this.dangerGraphics) {
+                this.dangerGraphics.visible = false;
+                this.dangerGraphics.clear();
+            }
+        }
     },
 
     // --------------------------------------------------------
@@ -1186,6 +1208,13 @@ const Pancake = {
                 this.body.position.x,
                 this.body.position.y
             );
+        }
+
+        // Play landing sound (except plate, handled in Game.win)
+        if (surface.label === 'butter') {
+            if (AudioManager) AudioManager.butterBounce();
+        } else if (surface.label !== 'plate') {
+            if (AudioManager) AudioManager.land();
         }
 
         // ----------------------------------------------------

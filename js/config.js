@@ -12,6 +12,7 @@
 //   CONFIG.obstacles
 //   CONFIG.colors
 //   CONFIG.input
+//   CONFIG.audio
 //
 // Legacy top-level names are still available as read-only
 // getters to avoid breaking existing files during migration.
@@ -499,6 +500,15 @@ const CONFIG = {
         window: 0xaed4f0,
 
         windowFrame: 0xf5e6d3
+    },
+
+    // ========================================================
+    // AUDIO
+    // ========================================================
+
+    audio: {
+        enabled: true,
+        volume: 0.5
     }
 };
 
