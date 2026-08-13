@@ -224,78 +224,39 @@ const Physics = {
     // --------------------------------------------------------
 
     step() {
-
+    
         if (!this.engine) {
             return;
         }
-
-        /*
-         * Air resistance is applied once per deterministic
-         * simulation step.
-         */
-        this.applyAirResistance();
-
+    
         Matter.Engine.update(
             this.engine,
             CONFIG.physics.fixedDeltaMilliseconds
         );
-    },
-
-    // --------------------------------------------------------
-    // AIR RESISTANCE
-    // --------------------------------------------------------
-
-    applyAirResistance() {
-
-        if (
-            typeof Pancake === 'undefined' ||
-            !Pancake.body
-        ) {
-            return;
-        }
-
-        if (
-            typeof Pancake.isInAir !== 'function' ||
-            !Pancake.isInAir()
-        ) {
-            return;
-        }
-
-        const body =
-            Pancake.body;
-
-        const airFriction =
-            Math.max(
-                0,
-                Math.min(
-                    1,
-                    CONFIG.physics.airFriction
-                )
-            );
-
-        if (airFriction === 0) {
-            return;
-        }
-
-        const velocity =
-            body.velocity;
-
-        const damping =
-            1 - airFriction;
-
-        Matter.Body.setVelocity(
-            body,
-            {
-                x:
-                    velocity.x *
-                    damping,
-
-                y:
-                    velocity.y *
-                    damping
+    
+        /*
+         * Clamp pancake velocities to prevent numerical instability.
+         */
+        const pancake = Pancake.body;
+        if (pancake) {
+            const maxX = CONFIG.physics.maxVelocity.x;
+            const maxY = CONFIG.physics.maxVelocity.y;
+            const maxAng = CONFIG.physics.maxVelocity.angular;
+            const vx = pancake.velocity.x;
+            const vy = pancake.velocity.y;
+            if (Math.abs(vx) > maxX) {
+                pancake.velocity.x = maxX * Math.sign(vx);
             }
-        );
+            if (Math.abs(vy) > maxY) {
+                pancake.velocity.y = maxY * Math.sign(vy);
+            }
+            const ang = pancake.angularVelocity;
+            if (Math.abs(ang) > maxAng) {
+                pancake.angularVelocity = maxAng * Math.sign(ang);
+            }
+        }
     },
+
 
     // --------------------------------------------------------
     // COLLISION HELPERS

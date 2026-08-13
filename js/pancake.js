@@ -51,11 +51,7 @@ const Pancake = {
      */
     contactSurfaces: new Set(),
 
-    // --------------------------------------------------------
-    // TRAIL
-    // --------------------------------------------------------
-
-    trailPositions: [],
+    ignoreButterUntil: 0,
 
     // --------------------------------------------------------
     // PIXI
@@ -160,8 +156,7 @@ const Pancake = {
             'counter'
         );
 
-        this.trailPositions = [];
-
+        this.ignoreButterUntil = 0;
         // ----------------------------------------------------
         // ADD TO PHYSICS WORLD
         // ----------------------------------------------------
@@ -732,21 +727,21 @@ const Pancake = {
     // --------------------------------------------------------
 
     beginContact(otherBody) {
-
+    
         if (
             !this.body ||
             !otherBody
         ) {
             return;
         }
-
+    
         const validSurfaces = [
             'counter',
             'griddle',
             'plate',
             'butter'
         ];
-
+    
         if (
             !validSurfaces.includes(
                 otherBody.label
@@ -754,14 +749,22 @@ const Pancake = {
         ) {
             return;
         }
-
+    
+        // Ignore butter contacts during the bounce cooldown period.
+        if (
+            otherBody.label === 'butter' &&
+            this.ignoreButterUntil > performance.now()
+        ) {
+            return;
+        }
+    
         this.contactSurfaces.add(
             otherBody.label
         );
-
+    
         this.lastSurface =
             otherBody;
-
+    
         /*
          * We do NOT immediately call land().
          *
@@ -769,7 +772,7 @@ const Pancake = {
          * fixedUpdate() will decide when the landing is
          * actually valid.
          */
-
+    
         this.updateGroundedState();
     },
 
@@ -958,12 +961,6 @@ const Pancake = {
 
             this.restingTime = 0;
         }
-
-        // ----------------------------------------------------
-        // TRAIL
-        // ----------------------------------------------------
-
-        this.updateTrail();
     },
 
     // --------------------------------------------------------
@@ -1002,80 +999,6 @@ const Pancake = {
         return false;
     },
 
-    // --------------------------------------------------------
-    // TRAIL
-    // --------------------------------------------------------
-
-    updateTrail() {
-
-        if (
-            this.hasFlipped &&
-            this.body
-        ) {
-
-            this.trailPositions.push({
-                x:
-                    this.body.position.x,
-
-                y:
-                    this.body.position.y,
-
-                life: 1
-            });
-        }
-
-        /*
-         * Keep the trail bounded.
-         */
-
-        const maxTrail =
-            CONFIG.particles.maxParticles > 0
-                ? CONFIG.particles.maxParticles
-                : 300;
-
-        if (
-            this.trailPositions.length >
-            maxTrail
-        ) {
-
-            this.trailPositions.shift();
-        }
-
-        const trailFadeRate =
-            0.03;
-
-        const trailGravity =
-            0.05;
-
-        for (
-            let i =
-                this.trailPositions.length - 1;
-
-            i >= 0;
-
-            i--
-        ) {
-
-            const trail =
-                this.trailPositions[i];
-
-            trail.life -=
-                trailFadeRate;
-
-            trail.y +=
-                trailGravity;
-
-            if (
-                trail.life <= 0
-            ) {
-
-                this.trailPositions.splice(
-                    i,
-                    1
-                );
-            }
-        }
-    },
 
     // --------------------------------------------------------
     // LANDING CHECK
@@ -1300,100 +1223,112 @@ const Pancake = {
             return;
         }
 
-        // ----------------------------------------------------
-        // BUTTER = BOUNCE
-        // ----------------------------------------------------
-
-        if (
-            surface.label === 'butter'
-        ) {
-
-    /*
-     * Determine a guaranteed horizontal direction.
-     *
-     * If the pancake is left of the butter centre, bounce left.
-     * If it is right of the butter centre, bounce right.
-     *
-     * This prevents a straight vertical bounce from trapping
-     * the pancake on top of the butter forever.
-     */
-
-            const butterX =
-                surface.position
-                    ? surface.position.x
-                    : this.body.position.x;
-
-            const direction =
-                this.body.position.x <= butterX
-                    ? -1
-                    : 1;
-
-            const minHorizontal =
-                CONFIG.obstacles.butter.minimumHorizontalBounceVelocity;
-
-            let bounceX =
-                this.body.velocity.x *
-                CONFIG.obstacles.butter.bounceVelocityMultiplier;
+            // ----------------------------------------------------
+            // BUTTER = BOUNCE
+            // ----------------------------------------------------
 
             if (
-                Math.abs(bounceX) <
-                minHorizontal
+                surface.label === 'butter'
             ) {
 
-                bounceX =
-                    direction *
-                    minHorizontal;
-            }
+        /*
+         * Determine a guaranteed horizontal direction.
+         *
+         * If the pancake is left of the butter centre, bounce left.
+         * If it is right of the butter centre, bounce right.
+         *
+         * This prevents a straight vertical bounce from trapping
+         * the pancake on top of the butter forever.
+         */
 
-            const bounceY =
-                -Math.max(
-                    CONFIG.obstacles.butter.minimumBounceVelocity,
-                    Math.abs(
-                        this.body.velocity.y
-                    ) *
-                    CONFIG.obstacles.butter.restitution
-                );
+                const butterX =
+                    surface.position
+                        ? surface.position.x
+                        : this.body.position.x;
 
-            Matter.Body.setVelocity(
-                this.body,
-                {
-                    x: bounceX,
-                    y: bounceY
+                const direction =
+                    this.body.position.x <= butterX
+                        ? -1
+                        : 1;
+
+                const minHorizontal =
+                    CONFIG.obstacles.butter.minimumHorizontalBounceVelocity;
+
+                let bounceX =
+                    this.body.velocity.x *
+                    CONFIG.obstacles.butter.bounceVelocityMultiplier;
+
+                if (
+                    Math.abs(bounceX) <
+                    minHorizontal
+                ) {
+
+                    bounceX =
+                        direction *
+                        minHorizontal;
                 }
-            );
 
-            const bounceAngularVelocity =
-                CONFIG.gameplay.flip.angularVelocityMin;
+                const bounceY =
+                    -Math.max(
+                        CONFIG.obstacles.butter.minimumBounceVelocity,
+                        Math.abs(
+                            this.body.velocity.y
+                        ) *
+                        CONFIG.obstacles.butter.restitution
+                    );
 
-            Matter.Body.setAngularVelocity(
-                this.body,
-                bounceAngularVelocity
-            );
-
-            this.isResting =
-                false;
-
-            this.isGrounded =
-                false;
-
-            this.hasFlipped =
-                true;
-
-            this.landingHandled =
-                false;
-
-            this.contactSurfaces.clear();
-
-            if (
-                typeof UI !== 'undefined'
-            ) {
-                UI.showMessage(
-                    'Boing! 🧈'
+                Matter.Body.setVelocity(
+                    this.body,
+                    {
+                        x: bounceX,
+                        y: bounceY
+                    }
                 );
-            }
 
-            return;
-        }
+                const bounceAngularVelocity =
+                    CONFIG.gameplay.flip.angularVelocityMin;
+
+                Matter.Body.setAngularVelocity(
+                    this.body,
+                    bounceAngularVelocity
+                );
+
+                // Separate the pancake from the butter to avoid immediate re-contact.
+                const butterPos = surface.position ? surface.position : { x: this.body.position.x, y: this.body.position.y };
+                const sepX = direction * 8;
+                const sepY = -15; // upward
+                Matter.Body.setPosition(this.body, {
+                    x: this.body.position.x + sepX,
+                    y: this.body.position.y + sepY
+                });
+
+                // Ignore butter collisions for a short time to prevent bounce loops.
+                this.ignoreButterUntil = performance.now() + 200;
+
+                this.isResting =
+                    false;
+
+                this.isGrounded =
+                    false;
+
+                this.hasFlipped =
+                    true;
+
+                this.landingHandled =
+                    false;
+
+                this.contactSurfaces.clear();
+
+                if (
+                    typeof UI !== 'undefined'
+                ) {
+                    UI.showMessage(
+                        'Boing! 🧈'
+                    );
+                }
+
+                return;
+            }
 
         // ----------------------------------------------------
         // NORMAL SURFACES
@@ -1404,6 +1339,7 @@ const Pancake = {
             surface.label === 'griddle'
         ) {
 
+            this.flipCooldown = 0;
             this.canFlipAgain =
                 true;
 
