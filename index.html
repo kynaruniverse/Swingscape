@@ -42,6 +42,14 @@
 </head>
 
 <body>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            var d = document.createElement('div');
+            d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#fdd;color:#900;padding:10px;z-index:9999;font-size:14px;font-family:sans-serif;';
+            d.textContent = 'JS Error: ' + msg + ' at line ' + line + ':' + col;
+            document.body.appendChild(d);
+        };
+    </script>
 
     <!-- =========================================================
          GAME SHELL

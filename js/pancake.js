@@ -236,31 +236,14 @@ const Pancake = {
         // PANCAKE BODY
         // ----------------------------------------------------
 
-        const gradient =
-            new PIXI.FillGradient(
-                0,
-                -height / 2,
-                0,
-                height / 2
-            );
-
-        gradient.addColorStop(
-            0,
-            CONFIG.colors.pancakeLight
-        );
-
-        gradient.addColorStop(
-            0.5,
-            CONFIG.colors.pancake
-        );
-
-        gradient.addColorStop(
-            1,
-            CONFIG.colors.pancakeDark
-        );
+        /*
+         * Solid colour body.
+         *
+         * No gradient.
+         */
 
         g.beginFill(
-            gradient
+            CONFIG.colors.pancake
         );
 
         g.drawRoundedRect(
@@ -349,15 +332,27 @@ const Pancake = {
         // BUTTER
         // ----------------------------------------------------
 
+        const rawAngle =
+            this.body
+                ? this.body.angle
+                : 0;
+
+        /*
+         * Clamp angle to [-π, π] manually.
+         */
+
+        const clampedAngle =
+            Math.max(
+                -Math.PI,
+                Math.min(
+                    Math.PI,
+                    rawAngle
+                )
+            );
+
         const normalizedAngle =
             Math.abs(
-                Matter.Common.clamp(
-                    this.body
-                        ? this.body.angle
-                        : 0,
-                    -Math.PI,
-                    Math.PI
-                )
+                clampedAngle
             );
 
         const roughlyFlat =

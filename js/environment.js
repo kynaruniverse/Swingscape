@@ -108,31 +108,14 @@ const Environment = {
         const g =
             Renderer.createGraphics();
 
-        const gradient =
-            new PIXI.FillGradient(
-                0,
-                0,
-                0,
-                CONFIG.counterY
-            );
-
-        gradient.addColorStop(
-            0,
-            CONFIG.colors.background
-        );
-
-        gradient.addColorStop(
-            0.55,
-            CONFIG.colors.wall
-        );
-
-        gradient.addColorStop(
-            1,
-            CONFIG.colors.backgroundDark
-        );
-
+        /*
+         * Solid background colour.
+         *
+         * No gradient because PixiJS v7 does not have
+         * PIXI.FillGradient.
+         */
         g.beginFill(
-            gradient
+            CONFIG.colors.background
         );
 
         g.drawRect(
@@ -343,28 +326,12 @@ const Environment = {
 
         /*
          * Glass.
+         *
+         * Solid colour instead of gradient.
          */
 
-        const glassGradient =
-            new PIXI.FillGradient(
-                windowX,
-                windowY,
-                windowX,
-                windowY + windowHeight
-            );
-
-        glassGradient.addColorStop(
-            0,
-            CONFIG.colors.window
-        );
-
-        glassGradient.addColorStop(
-            1,
-            0xe9f5fc
-        );
-
         g.beginFill(
-            glassGradient
+            0xcfe8f8
         );
 
         g.drawRoundedRect(
