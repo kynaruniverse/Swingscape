@@ -342,7 +342,8 @@ const CONFIG = {
 
             bounceVelocityMultiplier: 1.35,
 
-            minimumBounceVelocity: 4
+            minimumBounceVelocity: 4,
+            minimumHorizontalBounceVelocity: 3.5
         },
 
         syrup: {

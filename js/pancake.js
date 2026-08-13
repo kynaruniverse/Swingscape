@@ -479,38 +479,46 @@ const Pancake = {
 
         g.endFill();
 
-        // Mouth
+        /*
+         * Mouth.
+         *
+         * Simple filled rectangle instead of stroke paths,
+         * because PixiJS v7 in this CDN build does not expose
+         * `g.stroke()`.
+         */
 
-        g.lineStyle(
-            2,
-            0x333333,
-            1
+        g.beginFill(
+            0x333333
         );
 
         if (this.isResting) {
 
-            g.arc(
-                0,
+            /*
+             * Slightly curved smile shape:
+             * a small thin rounded rectangle.
+             */
+            g.drawRoundedRect(
+                -6,
                 1,
-                6,
-                0.15 * Math.PI,
-                0.85 * Math.PI
+                12,
+                4,
+                2
             );
 
         } else {
 
-            g.moveTo(
+            /*
+             * Neutral line mouth.
+             */
+            g.drawRect(
                 -5,
-                4
-            );
-
-            g.lineTo(
-                5,
-                4
+                3,
+                10,
+                2
             );
         }
 
-        g.stroke();
+        g.endFill();
     },
 
     // --------------------------------------------------------
@@ -816,6 +824,74 @@ const Pancake = {
     },
 
     // --------------------------------------------------------
+    // HORIZONTAL WRAP
+    // --------------------------------------------------------
+
+    wrapHorizontal() {
+
+        if (!this.body) {
+            return;
+        }
+
+        const halfWidth =
+            CONFIG.pancake.width / 2;
+
+        const leftBound =
+            -halfWidth;
+
+        const rightBound =
+            CONFIG.canvasWidth + halfWidth;
+
+        if (
+            this.body.position.x < leftBound
+        ) {
+
+            const newX =
+                CONFIG.canvasWidth + halfWidth;
+
+            /*
+             * Update positionPrev to prevent Matter from
+             * interpreting the teleport as a huge velocity.
+             */
+            this.body.positionPrev.x =
+                newX;
+
+            Matter.Body.setPosition(
+                this.body,
+                {
+                    x: newX,
+                    y: this.body.position.y
+                }
+            );
+
+            /*
+             * Clear trail to avoid a line across the screen.
+             */
+            this.trailPositions = [];
+
+        } else if (
+            this.body.position.x > rightBound
+        ) {
+
+            const newX =
+                -halfWidth;
+
+            this.body.positionPrev.x =
+                newX;
+
+            Matter.Body.setPosition(
+                this.body,
+                {
+                    x: newX,
+                    y: this.body.position.y
+                }
+            );
+
+            this.trailPositions = [];
+        }
+    },
+
+    // --------------------------------------------------------
     // FIXED UPDATE
     // --------------------------------------------------------
 
@@ -851,6 +927,12 @@ const Pancake = {
                 this.canFlipAgain = true;
             }
         }
+
+        // ----------------------------------------------------
+        // HORIZONTAL WRAP
+        // ----------------------------------------------------
+
+        this.wrapHorizontal();
 
         // ----------------------------------------------------
         // GROUND STATE
@@ -1226,9 +1308,42 @@ const Pancake = {
             surface.label === 'butter'
         ) {
 
-            const bounceX =
+    /*
+     * Determine a guaranteed horizontal direction.
+     *
+     * If the pancake is left of the butter centre, bounce left.
+     * If it is right of the butter centre, bounce right.
+     *
+     * This prevents a straight vertical bounce from trapping
+     * the pancake on top of the butter forever.
+     */
+
+            const butterX =
+                surface.position
+                    ? surface.position.x
+                    : this.body.position.x;
+
+            const direction =
+                this.body.position.x <= butterX
+                    ? -1
+                    : 1;
+
+            const minHorizontal =
+                CONFIG.obstacles.butter.minimumHorizontalBounceVelocity;
+
+            let bounceX =
                 this.body.velocity.x *
                 CONFIG.obstacles.butter.bounceVelocityMultiplier;
+
+            if (
+                Math.abs(bounceX) <
+                minHorizontal
+            ) {
+
+                bounceX =
+                    direction *
+                    minHorizontal;
+            }
 
             const bounceY =
                 -Math.max(
