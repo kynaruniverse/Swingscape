@@ -2,48 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    >
-
-    <meta
-        name="theme-color"
-        content="#f7dfc2"
-    >
-
-    <meta
-        name="apple-mobile-web-app-capable"
-        content="yes"
-    >
-
-    <meta
-        name="apple-mobile-web-app-status-bar-style"
-        content="default"
-    >
-
-    <meta
-        name="mobile-web-app-capable"
-        content="yes"
-    >
-
-    <meta
-        name="description"
-        content="Pancake Plop! — Flip, dodge kitchen chaos, and land the perfect pancake."
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#f7dfc2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Pancake Plop! Flip, dodge kitchen chaos, and land the perfect pancake.">
     <title>Pancake Plop! 🥞</title>
-
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
-
-    <link
-        rel="stylesheet"
-        href="styles/main.css"
-    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
 </head>
-
 <body>
     <script>
         window.onerror = function(msg, url, line, col, error) {
@@ -53,251 +25,57 @@
             document.body.appendChild(d);
         };
     </script>
-
-    <!-- =========================================================
-         GAME SHELL
-         Pixi and HTML UI occupy the same fixed 420×750 viewport.
-         ========================================================= -->
-
-    <main
-        id="game"
-        aria-label="Pancake Plop!"
-    >
-
-        <!-- =====================================================
-             PIXI RENDERER ROOT
-
-             Renderer.js appends the Pixi canvas here.
-             ===================================================== -->
-
-        <div
-            id="pixi-container"
-            aria-hidden="true"
-        ></div>
-
-
-        <!-- =====================================================
-             HTML UI LAYER
-
-             UI.js owns all DOM inside this container.
-             ===================================================== -->
-
-        <div
-            id="ui-container"
-            aria-live="off"
-        >
-
-            <!-- =================================================
-                 HEADS-UP DISPLAY
-                 ================================================= -->
-
-            <header
-                id="hud"
-                aria-label="Game information"
-            >
-
-                <div
-                    class="hud-pill"
-                    id="flip-counter"
-                >
-                    <span
-                        class="hud-icon"
-                        aria-hidden="true"
-                    >🥞</span>
-
-                    <span
-                        class="hud-value"
-                    >Flips: 0</span>
+    <main id="game" aria-label="Pancake Plop!">
+        <div id="pixi-container" aria-hidden="true"></div>
+        <div id="ui-container" aria-live="off">
+            <header id="hud" aria-label="Game information">
+                <div class="hud-pill" id="flip-counter">
+                    <span class="hud-icon" aria-hidden="true">🔄</span>
+                    <span class="hud-value">Flips: 0</span>
                 </div>
-
-
-                <div
-                    class="hud-pill"
-                    id="level-indicator"
-                >
-                    <span
-                        class="hud-icon"
-                        aria-hidden="true"
-                    >⭐</span>
-
-                    <span
-                        class="hud-value"
-                    >Level 1</span>
+                <div class="hud-pill" id="level-indicator">
+                    <span class="hud-icon" aria-hidden="true">⭐</span>
+                    <span class="hud-value">Level 1</span>
                 </div>
-
             </header>
-
-
-            <!-- =================================================
-                 FLOATING GAME MESSAGE
-                 ================================================= -->
-
-            <div
-                id="message"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-            ></div>
-
-
-            <!-- =================================================
-                 FLIP POWER / CHARGE UI
-                 ================================================= -->
-
-            <section
-                id="charge-ui"
-                aria-label="Flip power"
-                aria-hidden="true"
-            >
-
+            <div id="message" role="status" aria-live="polite" aria-atomic="true"></div>
+            <section id="charge-ui" aria-label="Flip power" aria-hidden="true">
                 <div class="charge-label">
-
                     <span>FLIP POWER</span>
-
-                    <span id="charge-percent">
-                        0%
-                    </span>
-
+                    <span id="charge-percent">0%</span>
                 </div>
-
-
-                <div
-                    class="charge-track"
-                    role="progressbar"
-                    aria-label="Flip power"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-valuenow="0"
-                >
-
+                <div class="charge-track" role="progressbar" aria-label="Flip power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                     <div id="charge-fill"></div>
-
-                    <div
-                        class="charge-highlight"
-                        aria-hidden="true"
-                    ></div>
-
+                    <div class="charge-highlight" aria-hidden="true"></div>
                 </div>
-
-
-                <div class="charge-hint">
-                    Release to flip!
-                </div>
-
+                <div class="charge-hint">Release to flip!</div>
             </section>
-
-
-            <!-- =================================================
-                 START / MENU OVERLAY
-                 ================================================= -->
-
-            <section
-                id="ui-overlay"
-                aria-label="Game menu"
-            >
-
+            <section id="ui-overlay" aria-label="Game menu">
                 <div class="menu-card">
-
-                    <div
-                        class="menu-pancake"
-                        aria-hidden="true"
-                    >
+                    <div class="menu-pancake" aria-hidden="true">
                         <span>🥞</span>
                     </div>
-
-
-                    <div class="menu-kicker">
-                        WELCOME TO THE KITCHEN
-                    </div>
-
-
-                    <h1>
-                        Pancake<br>
-                        <span>Plop!</span>
-                    </h1>
-
-
-                    <p class="menu-description">
-                        Flip the pancake, dodge the kitchen chaos,
-                        and land it perfectly on the plate.
-                    </p>
-
-
-                    <button
-                        id="startButton"
-                        type="button"
-                    >
-
-                        <span
-                            class="button-icon"
-                            aria-hidden="true"
-                        >🥞</span>
-
-                        <span>
-                            Start Level
-                        </span>
-
-                        <span
-                            class="button-arrow"
-                            aria-hidden="true"
-                        >→</span>
-
+                    <div class="menu-kicker">WELCOME TO THE KITCHEN</div>
+                    <h1>Pancake<br><span>Plop!</span></h1>
+                    <p class="menu-description">Flip the pancake, dodge the kitchen chaos, and land it perfectly on the plate.</p>
+                    <button id="startButton" type="button">
+                        <span class="button-icon" aria-hidden="true">▶️</span>
+                        <span>Start Level</span>
+                        <span class="button-arrow" aria-hidden="true">→</span>
                     </button>
-
-
                     <div class="controls-hint">
-
-                        <span
-                            class="control-dot"
-                            aria-hidden="true"
-                        >●</span>
-
-                        <span>
-                            Hold anywhere to charge
-                        </span>
-
-                        <span
-                            class="control-dot"
-                            aria-hidden="true"
-                        >●</span>
-
-                        <span>
-                            Release to flip
-                        </span>
-
+                        <span class="control-dot" aria-hidden="true">•</span>
+                        <span>Hold anywhere to charge</span>
+                        <span class="control-dot" aria-hidden="true">•</span>
+                        <span>Release to flip</span>
                     </div>
-
                 </div>
-
             </section>
-
         </div>
-
     </main>
-
-
-    <!-- =============================================================
-         PHYSICS ENGINE
-         ============================================================= -->
-
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"
-    ></script>
-
-
-    <!-- =============================================================
-         RENDERING ENGINE
-         ============================================================= -->
-
-    <script
-        src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"
-    ></script>
-
-
-    <!-- =============================================================
-         GAME SYSTEMS
-         ============================================================= -->
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+    
     <script src="js/config.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/particles.js"></script>
@@ -309,17 +87,15 @@
     <script src="js/input.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/game.js"></script>
-
+    
     <script>
-        // Keyboard focus management: allow canvas to receive focus programmatically
         document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.querySelector('#pixi-container canvas');
             if (canvas) {
                 canvas.setAttribute('tabindex', '0');
-                canvas.addEventListener('focus', () => { /* optional */ });
+                canvas.addEventListener('focus', () => {});
             }
         });
     </script>
-
 </body>
 </html>
