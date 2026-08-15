@@ -1,38 +1,123 @@
+// ============================================================
+// PANCAKE PLOP! — AUDIO MANAGER
+// Web Audio API – simple sound effects
+// ============================================================
+
 const AudioManager = {
-    ctx: null,
-    
+
+    context: null,
+    enabled: true,
+    volume: 0.5,
+
+    // --------------------------------------------------------
+    // INIT
+    // --------------------------------------------------------
+
     init() {
-        if (CONFIG.audio.enabled) {
-            try {
-                window.AudioContext = window.AudioContext || window.webkitAudioContext;
-                this.ctx = new AudioContext();
-            } catch (e) {
-                console.warn('Web Audio API not supported');
-            }
+        try {
+            this.context = new (window.AudioContext || window.webkitAudioContext)();
+            // Resume on first user interaction
+            this.enabled = true;
+        } catch (e) {
+            console.warn('Audio not supported:', e);
+            this.enabled = false;
+        }
+
+        // Volume from config (if defined)
+        if (CONFIG.audio) {
+            this.volume = CONFIG.audio.volume || 0.5;
         }
     },
-    
-    playTone(freq, type, duration, vol) {
-        if (!this.ctx || !CONFIG.audio.enabled) return;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        
+
+    // --------------------------------------------------------
+    // PLAY TONE
+    // --------------------------------------------------------
+
+    playTone(frequency, duration, type = 'sine', volume = this.volume) {
+        if (!this.enabled || !this.context) return;
+        const osc = this.context.createOscillator();
+        const gain = this.context.createGain();
         osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        
-        gain.gain.setValueAtTime(vol * CONFIG.audio.volume, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
-        
+        osc.frequency.value = frequency;
+        gain.gain.value = volume * 0.3;
+        gain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + duration);
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(this.context.destination);
         osc.start();
-        osc.stop(this.ctx.currentTime + duration);
+        osc.stop(this.context.currentTime + duration);
     },
-    
-    flip() { this.playTone(400, 'sine', 0.2, 0.5); },
-    butterBounce() { this.playTone(300, 'triangle', 0.3, 0.6); },
-    land() { this.playTone(150, 'square', 0.1, 0.4); },
-    win() { this.playTone(600, 'sine', 0.5, 0.6); },
-    lose() { this.playTone(100, 'sawtooth', 0.5, 0.5); }
+
+    // --------------------------------------------------------
+    // SOUND EFFECTS
+    // --------------------------------------------------------
+
+    flip() {
+        this.playTone(400, 0.12, 'sine', 0.4);
+        this.playTone(600, 0.08, 'sine', 0.2);
+    },
+
+    land() {
+        this.playTone(250, 0.15, 'sine', 0.3);
+        this.playTone(300, 0.10, 'sine', 0.2);
+    },
+
+    butterBounce() {
+        this.playTone(700, 0.18, 'square', 0.3);
+        this.playTone(500, 0.12, 'sine', 0.2);
+    },
+
+    win() {
+        [523, 659, 784, 1047].forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.25, 'sine', 0.4), i * 120);
+        });
+    },
+
+    lose() {
+        this.playTone(300, 0.3, 'sawtooth', 0.2);
+        this.playTone(200, 0.3, 'sawtooth', 0.2);
+    },
+
+    // --------------------------------------------------------
+    // RESUME ON USER GESTURE
+    // --------------------------------------------------------
+
+    resume() {
+        if (this.context && this.context.state === 'suspended') {
+            this.context.resume();
+        }
+    }
 };
+
+
+// ============================================================
+// PRESENTATION EVENT SUBSCRIPTIONS
+// ============================================================
+//
+// Registered once at load time — see particles.js for why.
+// ============================================================
+
+PresentationEvents.on('launch', () => {
+    if (AudioManager) AudioManager.flip();
+});
+
+PresentationEvents.on('land', payload => {
+
+    /*
+     * Landing sound is surface-dependent: butter uses its own
+     * bounce sound, plate landings are handled by Game.win()/
+     * Game.lose() instead, and everything else (counter,
+     * griddle) uses the normal landing sound. This mirrors the
+     * exact conditional that used to live inline in
+     * Pancake.land().
+     */
+
+    if (!AudioManager) return;
+
+    if (payload.surfaceLabel === 'butter') {
+        AudioManager.butterBounce();
+    } else if (payload.surfaceLabel !== 'plate') {
+        AudioManager.land();
+    }
+});
+
 window.AudioManager = AudioManager;
