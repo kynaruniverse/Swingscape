@@ -222,6 +222,59 @@ const ObstaclesPresentation = {
         );
 
         g.endFill();
+
+        /*
+         * Brushed-metal highlight lines (Art Bible §5: metal
+         * gets "subtle brushed-texture suggestion via a few fine
+         * parallel highlight lines"), plus an upper-left
+         * highlight for consistency with the rest of the scene's
+         * single light source — griddle previously only had the
+         * bottom-edge "front lip" highlight above.
+         */
+
+        g.lineStyle(
+            1,
+            0xffffff,
+            0.10
+        );
+
+        for (
+            let i = 0;
+            i < 3;
+            i++
+        ) {
+
+            const lineY =
+                -height / 2 -
+                3 +
+                i * 2.5;
+
+            g.moveTo(
+                -width / 2 + 6,
+                lineY
+            );
+
+            g.lineTo(
+                width / 2 - 6,
+                lineY
+            );
+        }
+
+        g.lineStyle(0);
+
+        g.beginFill(
+            0xffffff,
+            0.08
+        );
+
+        g.drawEllipse(
+            -width * 0.28,
+            -height / 2 - 4,
+            width * 0.18,
+            3
+        );
+
+        g.endFill();
     },
 
     // --------------------------------------------------------
@@ -293,6 +346,28 @@ const ObstaclesPresentation = {
             -1,
             width / 2 - 8,
             8
+        );
+
+        g.endFill();
+
+        /*
+         * Highlight arc, upper-left (Art Bible §4/§5: single
+         * light source upper-left; ceramic gets "one clean
+         * highlight arc"). A thin bright ellipse segment rather
+         * than a full ring keeps it reading as one clean
+         * highlight, not a second decorative rim.
+         */
+
+        g.beginFill(
+            0xffffff,
+            0.35
+        );
+
+        g.drawEllipse(
+            -width * 0.18,
+            -4.5,
+            width * 0.16,
+            2.2
         );
 
         g.endFill();
@@ -501,7 +576,7 @@ const ObstaclesPresentation = {
         g.endFill();
 
         /*
-         * Bottle.
+         * Bottle (base colour, unchanged).
          */
 
         g.beginFill(
@@ -519,20 +594,78 @@ const ObstaclesPresentation = {
         g.endFill();
 
         /*
-         * Bottle highlight.
+         * Amber content window (Art Bible §5: syrup itself is
+         * "glossy, amber, translucent" — the bottle previously
+         * had no suggestion of visible liquid inside it at all,
+         * just a painted-solid prop). A simple layered-alpha
+         * panel, inset from the bottle walls, standing in for
+         * "you can see the syrup through the bottle."
          */
 
         g.beginFill(
-            0xa85d2b,
-            0.75
+            CONFIG.colors.syrup,
+            0.55
+        );
+
+        g.drawRoundedRect(
+            -width / 2 + 3,
+            -height / 2 + 14,
+            width - 6,
+            height - 20,
+            3
+        );
+
+        g.endFill();
+
+        g.beginFill(
+            0xffb648,
+            0.18
+        );
+
+        g.drawRoundedRect(
+            -width / 2 + 3,
+            -height / 2 + 14,
+            width - 6,
+            (height - 20) * 0.4,
+            3
+        );
+
+        g.endFill();
+
+        /*
+         * Glass gloss streak — a single bright, narrow highlight
+         * near the left edge, per Art Bible §5 ("glossy... small
+         * highlight, not a hard specular point" — this is sized
+         * for a glass/plastic bottle rather than butter/ceramic,
+         * so it's a longer streak, not a small dot).
+         */
+
+        g.beginFill(
+            0xffffff,
+            0.32
         );
 
         g.drawRoundedRect(
             -width / 2 + 4,
             -height / 2 + 4,
-            5,
+            4,
             height - 12,
-            3
+            2
+        );
+
+        g.endFill();
+
+        g.beginFill(
+            0xffffff,
+            0.16
+        );
+
+        g.drawRoundedRect(
+            -width / 2 + 9,
+            -height / 2 + 6,
+            2,
+            height - 18,
+            1
         );
 
         g.endFill();
@@ -672,6 +805,26 @@ const ObstaclesPresentation = {
             -2,
             width / 2 - 7,
             height / 2 - 5
+        );
+
+        g.endFill();
+
+        /*
+         * Rim highlight, upper-left (Art Bible §4/§5: single
+         * light source upper-left; ceramic gets one clean
+         * highlight arc, same treatment as the plate).
+         */
+
+        g.beginFill(
+            0xffffff,
+            0.28
+        );
+
+        g.drawEllipse(
+            -width * 0.22,
+            -height * 0.28,
+            width * 0.14,
+            height * 0.08
         );
 
         g.endFill();

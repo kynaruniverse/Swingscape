@@ -37,6 +37,8 @@ const Environment = {
 
         window: null,
 
+        shelfProps: null,
+
         counter: null,
 
         dustContainer: null,
@@ -81,6 +83,8 @@ const Environment = {
 
             window: null,
 
+            shelfProps: null,
+
             counter: null,
 
             dustContainer: null,
@@ -95,6 +99,8 @@ const Environment = {
         this.drawKitchenWall();
 
         this.drawWindow();
+
+        this.drawShelfProps();
 
         this.drawCounter();
 
@@ -116,21 +122,45 @@ const Environment = {
         const g =
             Renderer.createGraphics();
 
+        const width =
+            CONFIG.canvasWidth;
+
+        const height =
+            CONFIG.obstacles.counter.y;
+
         /*
-         * Solid background colour.
+         * A real gradient (audit finding: the previous comment
+         * here said "no gradient because PixiJS v7 does not have
+         * PIXI.FillGradient" — true for that specific v8 API,
+         * but v7 can still do a real gradient via a canvas-
+         * generated texture; see js/textures.js). This is the
+         * lower-risk target flagged when that utility was built:
+         * a static, non-rotating, full-panel rect with the
+         * texture generated at exactly this rect's size, so the
+         * fill maps 1:1 with no tiling/matrix math needed.
          *
-         * No gradient because PixiJS v7 does not have
-         * PIXI.FillGradient.
+         * CONFIG.colors.backgroundDark existed in config but was
+         * never actually used anywhere until now — this is what
+         * it was for.
          */
-        g.beginFill(
-            CONFIG.colors.background
-        );
+
+        const texture =
+            Textures.linearGradient({
+                width,
+                height,
+                topColor: CONFIG.colors.background,
+                bottomColor: CONFIG.colors.backgroundDark
+            });
+
+        g.beginTextureFill({
+            texture
+        });
 
         g.drawRect(
             0,
             0,
-            CONFIG.canvasWidth,
-            CONFIG.obstacles.counter.y
+            width,
+            height
         );
 
         g.endFill();
@@ -336,6 +366,22 @@ const Environment = {
          * Glass.
          *
          * Solid colour instead of gradient.
+         *
+         * (A texture-fill gradient was tried here during the
+         * Art Bible pass — same technique as drawBackground()
+         * below — but this rect isn't drawn at local (0,0), so
+         * it needs a translation matrix to align the texture
+         * with the rect's actual position. Whether PIXI.Matrix
+         * for a Graphics texture fill maps local-space→texture-
+         * space or the reverse isn't something I could verify
+         * with confidence without a browser to actually render
+         * it in, and getting the direction wrong would show a
+         * shifted/wrong slice of the gradient — a visible
+         * regression on something that currently works. Left as
+         * a solid fill rather than ship an unverified guess;
+         * drawBackground()'s gradient is the confidently-correct
+         * version of this technique, since it fills a rect at
+         * local (0,0) where there's no directional ambiguity.)
          */
 
         g.beginFill(
@@ -544,6 +590,220 @@ const Environment = {
     },
 
     // ========================================================
+    // SHELF PROPS
+    // ========================================================
+    //
+    // Master Spec §24 ("Environmental Props") / §55 (priority
+    // list item 8, "primary environmental props") — the kitchen
+    // previously had zero purely-decorative objects; everything
+    // visible was either wall/window/counter or a functional
+    // gameplay obstacle (audit finding). This is a first, small,
+    // deliberately modest addition: a single wall shelf with two
+    // jars, placed in genuinely open wall space to the right of
+    // the window. The counter itself is already tightly packed
+    // with gameplay obstacles across most of its width (griddle,
+    // butter ×2, syrup, bowl, plate all sit within roughly
+    // x=45–400 of the 420-wide canvas) — adding more objects
+    // there risks visually crowding the gameplay plane, so this
+    // stays on the wall/background band instead (Art Bible §9).
+    // ========================================================
+
+    drawShelfProps() {
+
+        const g =
+            Renderer.createGraphics();
+
+        const shelfX = 300;
+        const shelfY = 195;
+        const shelfWidth = 95;
+        const shelfHeight = 8;
+
+        /*
+         * Shelf shadow.
+         */
+
+        g.beginFill(
+            0x000000,
+            0.14
+        );
+
+        g.drawRoundedRect(
+            shelfX,
+            shelfY + shelfHeight,
+            shelfWidth,
+            5,
+            2
+        );
+
+        g.endFill();
+
+        /*
+         * Shelf plank — wood, per Art Bible §5 ("wood used
+         * selectively for warmth"). This is exactly that
+         * selective use, not the counter itself (which is
+         * stone/quartz — see drawCounter()'s mottling comment).
+         */
+
+        g.beginFill(
+            CONFIG.colors.counter
+        );
+
+        g.drawRoundedRect(
+            shelfX,
+            shelfY,
+            shelfWidth,
+            shelfHeight,
+            2
+        );
+
+        g.endFill();
+
+        g.beginFill(
+            0xffffff,
+            0.18
+        );
+
+        g.drawRoundedRect(
+            shelfX + 3,
+            shelfY + 1,
+            shelfWidth - 6,
+            1.5,
+            1
+        );
+
+        g.endFill();
+
+        /*
+         * Bracket.
+         */
+
+        g.beginFill(
+            CONFIG.colors.counterSide,
+            0.6
+        );
+
+        g.drawRect(
+            shelfX + shelfWidth / 2 - 2,
+            shelfY + shelfHeight,
+            4,
+            10
+        );
+
+        g.endFill();
+
+        /*
+         * Two jars on the shelf — simple glass/ceramic material
+         * per Art Bible §5: clean edges, one small highlight,
+         * restrained (§7: low texture density).
+         */
+
+        this._drawJar(
+            g,
+            shelfX + 24,
+            shelfY,
+            16,
+            26,
+            0xf5ede0,
+            0xe0d4b8
+        );
+
+        this._drawJar(
+            g,
+            shelfX + 62,
+            shelfY,
+            14,
+            22,
+            0xd4a574,
+            0xb98a54
+        );
+
+        Renderer.addToLayer(
+            'environment',
+            g,
+            'shelfProps'
+        );
+
+        this.graphics.shelfProps =
+            g;
+    },
+
+    /*
+     * Small helper: one simple jar, base anchored at (baseX,
+     * baseY) — jar sits ON TOP of that point, growing upward.
+     * `contentColor`/`lidColor` let the two shelf jars look
+     * subtly different (e.g. flour vs. sugar) without needing
+     * two separate drawing functions.
+     */
+    _drawJar(
+        g,
+        baseX,
+        baseY,
+        width,
+        height,
+        contentColor,
+        lidColor
+    ) {
+
+        const top =
+            baseY - height;
+
+        /*
+         * Jar body (glass — clean edges, per Art Bible §5).
+         */
+
+        g.beginFill(
+            contentColor
+        );
+
+        g.drawRoundedRect(
+            baseX - width / 2,
+            top + 6,
+            width,
+            height - 6,
+            3
+        );
+
+        g.endFill();
+
+        /*
+         * Lid.
+         */
+
+        g.beginFill(
+            lidColor
+        );
+
+        g.drawRoundedRect(
+            baseX - width / 2 - 1,
+            top,
+            width + 2,
+            7,
+            2
+        );
+
+        g.endFill();
+
+        /*
+         * Single clean highlight (Art Bible §5).
+         */
+
+        g.beginFill(
+            0xffffff,
+            0.30
+        );
+
+        g.drawRoundedRect(
+            baseX - width / 2 + 2,
+            top + 9,
+            2,
+            height - 12,
+            1
+        );
+
+        g.endFill();
+    },
+
+    // ========================================================
     // COUNTER PRESENTATION
     // ========================================================
 
@@ -649,44 +909,69 @@ const Environment = {
         g.endFill();
 
         /*
-         * Wood grain.
+         * Stone/quartz mottling (Art Bible §5: "Countertop:
+         * Stone/quartz... subtle texture... imperfections").
+         *
+         * Replaces the previous wavy "wood grain" lines here —
+         * that treatment belonged to a wood material, but the
+         * Art Bible calls for the counter itself to read as
+         * stone/quartz (wood is reserved for other props, per
+         * Master Spec §23). Soft, low-contrast, irregular
+         * blotches rather than a repeating pattern — per Art
+         * Bible §7, texture density here should be "easy to
+         * miss at a glance," not a focal detail.
          */
 
-        g.lineStyle(
-            1,
-            CONFIG.colors.counterSide,
-            0.12
-        );
+        const frontFaceTop =
+            counterY + 6;
+
+        const frontFaceHeight =
+            Math.max(
+                0,
+                CONFIG.canvasHeight -
+                counterY -
+                6
+            );
 
         for (
             let i = 0;
-            i < 14;
+            i < 10;
             i++
         ) {
 
-            const y =
-                counterY +
-                18 +
-                i * 8;
+            const mottleX =
+                Math.random() *
+                CONFIG.canvasWidth;
 
-            g.moveTo(
-                0,
-                y
+            const mottleY =
+                frontFaceTop +
+                Math.random() *
+                frontFaceHeight;
+
+            const mottleRadiusX =
+                6 + Math.random() * 14;
+
+            const mottleRadiusY =
+                3 + Math.random() * 5;
+
+            const lighter =
+                Math.random() > 0.5;
+
+            g.beginFill(
+                lighter
+                    ? CONFIG.colors.counterTop
+                    : CONFIG.colors.counterSide,
+                0.08 + Math.random() * 0.06
             );
 
-            g.quadraticCurveTo(
-                CONFIG.canvasWidth * 0.25,
-                y - 2,
-                CONFIG.canvasWidth * 0.5,
-                y
+            g.drawEllipse(
+                mottleX,
+                mottleY,
+                mottleRadiusX,
+                mottleRadiusY
             );
 
-            g.quadraticCurveTo(
-                CONFIG.canvasWidth * 0.75,
-                y + 2,
-                CONFIG.canvasWidth,
-                y - 1
-            );
+            g.endFill();
         }
 
         Renderer.addToLayer(
