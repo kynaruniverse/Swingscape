@@ -21,7 +21,8 @@ const PHYSICS = {
 
   // Reeling contracts the rope and preserves angular momentum.
   reelSpeed: 420,
-  minRopeLength: 105,
+  minRopeLength: 140,        // was 105 — restores the earlier fix
+  attachMomentumRetention: 0.65,  // new — damping applied only at the moment of a fresh grab
   reelMomentumBoost: 1.018,
 
   // Slack is real: the player may move inside the rope radius.
@@ -121,7 +122,7 @@ function attachToAnchor(player, anchor) {
   const incomingOmega =
     velocityToAngularVelocity(player, anchor);
 
-  player.angularVelocity = incomingOmega;
+  player.angularVelocity = incomingOmega * PHYSICS.attachMomentumRetention;
 
   player.ropeState = ROPE_STATES.ATTACHING;
   player.attached = true;

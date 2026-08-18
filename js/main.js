@@ -336,12 +336,7 @@ function loop(now) {
 }
 
 function render() {
-  ctx.clearRect(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
+  drawCityBackdrop(ctx, canvas.width, canvas.height, camera.x);
 
   // Strong visual tell for the save window.
   if (player.saveWindowActive) {
