@@ -1,0 +1,10 @@
+{
+  "name": "SWINGSCAPE",
+  "short_name": "SWINGSCAPE",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#f5f0e6",
+  "theme_color": "#f5f0e6",
+  "icons": []
+}
