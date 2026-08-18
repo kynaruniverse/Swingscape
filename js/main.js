@@ -1,13 +1,32 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
+// Logical (CSS-pixel) dimensions — all gameplay math (camera, floor,
+// building layout) uses these, NOT canvas.width/canvas.height, which
+// are set to physical device pixels for crisp rendering on any
+// screen density.
+let viewWidth = window.innerWidth;
+let viewHeight = window.innerHeight;
+
 function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+
+  viewWidth = window.innerWidth;
+  viewHeight = window.innerHeight;
+
+  canvas.width = viewWidth * dpr;
+  canvas.height = viewHeight * dpr;
+  canvas.style.width = viewWidth + 'px';
+  canvas.style.height = viewHeight + 'px';
+
+  // All subsequent drawing calls can keep using logical/CSS-pixel
+  // coordinates; this transform maps them onto the real pixel grid.
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 resize();
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', resize);
 
 const world = createWorld();
 const FLOOR_Y_OFFSET = 40;
@@ -54,7 +73,6 @@ function attemptAttach(screenX, screenY, radius) {
     return false;
   }
 
-  // Don't immediately reconnect to the anchor we just released from.
   if (
     player.lastReleasedAnchor === anchor &&
     player.ignoreAnchorTimer > 0
@@ -142,8 +160,6 @@ canvas.addEventListener('pointerdown', (e) => {
       radius
     );
   } else {
-    // Tapping another anchor while already attached switches the
-    // rope without throwing away the current momentum.
     const target =
       findNearestAnchor(
         world,
@@ -182,7 +198,7 @@ canvas.addEventListener('pointercancel', () => {
 });
 
 function floorY() {
-  return canvas.height - FLOOR_Y_OFFSET;
+  return viewHeight - FLOOR_Y_OFFSET;
 }
 
 function updateTimers(dt) {
@@ -214,8 +230,6 @@ function loop(now) {
   player.prevX = player.x;
   player.prevY = player.y;
 
-  // Save-window slow motion applies to gameplay physics, but its
-  // countdown remains real-time.
   const effectiveDt =
     player.saveWindowActive
       ? dt * PHYSICS.saveWindowSlowMo
@@ -226,7 +240,6 @@ function loop(now) {
     dt
   );
 
-  // Soft hazard collision.
   const hazardHit =
     checkSoftHazardCollision(
       world,
@@ -260,8 +273,6 @@ function loop(now) {
       effectiveDt
     );
 
-    // Holding the pointer gives the player an opportunity to
-    // automatically catch an anchor as they fly past it.
     attemptAutoCatch();
   }
 
@@ -328,7 +339,7 @@ function loop(now) {
 
   camera.x =
     player.x -
-    canvas.width * 0.35;
+    viewWidth * 0.35;
 
   render();
 
@@ -336,9 +347,8 @@ function loop(now) {
 }
 
 function render() {
-  drawCityBackdrop(ctx, canvas.width, canvas.height, camera.x);
+  drawCityBackdrop(ctx, viewWidth, viewHeight, camera.x);
 
-  // Strong visual tell for the save window.
   if (player.saveWindowActive) {
     ctx.fillStyle =
       'rgba(224, 90, 60, 0.18)';
@@ -346,8 +356,8 @@ function render() {
     ctx.fillRect(
       0,
       0,
-      canvas.width,
-      canvas.height
+      viewWidth,
+      viewHeight
     );
   }
 
@@ -384,80 +394,25 @@ function render() {
     prevEnd,
     floorY(),
     camera.x +
-      canvas.width +
+      viewWidth +
       100 -
       prevEnd,
     200
   );
 
-  // Anchors.
   for (const anchor of world.anchors) {
-    const isCurrent =
-      player.anchor === anchor;
-
-    ctx.fillStyle =
-      isCurrent
-        ? '#e05a3c'
-        : '#4a90a4';
-
-    ctx.beginPath();
-
-    ctx.arc(
-      anchor.x,
-      anchor.y,
-      isCurrent ? 10 : 8,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fill();
+    drawAnchor(ctx, anchor, player.anchor === anchor);
   }
-
-  // Hazard strips.
-  ctx.fillStyle =
-    'rgba(200, 70, 60, 0.55)';
 
   for (const strip of world.hazardStrips) {
-    if (strip.type === 'ground') {
-      ctx.fillRect(
-        strip.startX,
-        floorY() - 30,
-        strip.endX - strip.startX,
-        30
-      );
-    } else {
-      ctx.fillRect(
-        strip.startX,
-        strip.y,
-        strip.endX - strip.startX,
-        strip.height
-      );
-    }
+    drawHazardStrip(ctx, strip, floorY());
   }
-
-  // Moving obstacles.
-  ctx.fillStyle =
-    '#7a6a55';
 
   for (const obs of world.movingObstacles) {
-    ctx.fillRect(
-      obs.x,
-      obs.y,
-      obs.width,
-      obs.height
-    );
+    drawMovingObstacle(ctx, obs);
   }
 
-  // Goal.
-  ctx.fillStyle =
-    '#e0b23c';
-
-  ctx.fillRect(
-    world.goalX - 4,
-    floorY() - 200,
-    8,
-    200
-  );
+  drawGoal(ctx, world.goalX, floorY());
 
   drawRope(
     ctx,
@@ -469,7 +424,6 @@ function render() {
     player
   );
 
-  // Save-window mercy indicator.
   if (player.saveWindowActive) {
     const alpha =
       player.saveWindowTimeLeft /

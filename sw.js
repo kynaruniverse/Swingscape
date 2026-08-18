@@ -1,4 +1,4 @@
-const CACHE_NAME = 'swingscape-v3';
+const CACHE_NAME = 'swingscape-v5';
 const FILES_TO_CACHE = [
   './index.html',
   './css/style.css',
@@ -7,6 +7,7 @@ const FILES_TO_CACHE = [
   './js/player.js',
   './js/world.js',
   './js/city.js',
+  './js/gameplay-art.js',
   './manifest.json'
 ];
 
