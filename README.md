@@ -103,3 +103,5 @@ to tune the data, rather than as part of your regular workflow.
 - Rarity scoring curve is a starting formula, not tuned against real play yet
 - Definition coverage is 87.8% — some adverb-form definitions pull the noun sense of the root word rather than the adjective sense (a real definition, just not always the ideal one)
 - None of the app UI has been confirmed running on an actual device yet — the logic layer is fully tested, the UI is not
+
+
