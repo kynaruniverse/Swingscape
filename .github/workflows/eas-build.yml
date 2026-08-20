@@ -1,0 +1,36 @@
+name: EAS Build (Android APK)
+
+# Runs whenever you push to main, and can also be triggered manually
+# from the Actions tab on GitHub if you want a build without pushing.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: ./app
+        run: npm install
+
+      - name: Trigger EAS Build (cloud — actual build runs on Expo's servers, not this runner)
+        working-directory: ./app
+        run: eas build --platform android --profile preview --non-interactive --no-wait
