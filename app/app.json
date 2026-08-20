@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Niche",
+    "slug": "niche-word-game",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": { "backgroundColor": "#1a1a1a" },
+    "android": {
+      "package": "co.blackwooddigital.niche",
+      "adaptiveIcon": { "backgroundColor": "#1a1a1a" }
+    },
+    "ios": {
+      "bundleIdentifier": "co.blackwooddigital.niche"
+    }
+  }
+}
