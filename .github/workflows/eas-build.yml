@@ -31,6 +31,10 @@ jobs:
         working-directory: ./app
         run: npm install
 
+      - name: Link EAS project (safe to leave in — no-ops once app.json has a projectId)
+        working-directory: ./app
+        run: eas init --non-interactive --account blackwoodco --force
+
       - name: Trigger EAS Build (cloud — actual build runs on Expo's servers, not this runner)
         working-directory: ./app
         run: eas build --platform android --profile preview --non-interactive --no-wait
