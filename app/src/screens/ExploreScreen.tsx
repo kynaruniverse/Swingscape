@@ -23,7 +23,6 @@ import {
 } from "../logic/roundState";
 import { maybeAddToCollection, COLLECTION_MIN_RARITY } from "../logic/collectionStore";
 import { useNavigation } from "@react-navigation/native";
-import { maybeAddToCollection } from "../logic/collectionStore";
 
 const TIER_COLORS: Record<Tier, string> = {
   common: "#8a8a8a",
