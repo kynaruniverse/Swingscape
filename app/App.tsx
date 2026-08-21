@@ -5,9 +5,11 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useFonts, DMSerifDisplay_400Regular } from "@expo-google-fonts/dm-serif-display";
+import { JetBrainsMono_500Medium, JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono";
 import { WordStore, WordEntry } from "./src/logic/wordStore";
 import ExploreScreen from "./src/screens/ExploreScreen";
 import CollectionScreen from "./src/screens/CollectionScreen";
+import { COLORS, NAV_THEME } from "./src/theme/appTheme";
 
 // Bundled at build time by the Metro bundler — no network fetch needed,
 // this is what makes true offline/unlimited play possible.
@@ -17,7 +19,11 @@ const Tab = createBottomTabNavigator();
 
 export default function App() {
   const [store, setStore] = useState<WordStore | null>(null);
-  const [fontsLoaded] = useFonts({ DMSerifDisplay_400Regular });
+  const [fontsLoaded] = useFonts({
+    DMSerifDisplay_400Regular,
+    JetBrainsMono_500Medium,
+    JetBrainsMono_700Bold,
+  });
 
   useEffect(() => {
     // Constructing the WordStore builds a Map of ~78k entries — cheap
@@ -34,26 +40,14 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer
-      theme={{
-        dark: true,
-        colors: {
-          primary: "#d4a13d",
-          background: "#1a1a1a",
-          card: "#1a1a1a",
-          text: "#fff",
-          border: "#2a2a2a",
-          notification: "#d4a13d",
-        },
-      }}
-    >
+    <NavigationContainer theme={NAV_THEME}>
       <StatusBar style="light" />
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarStyle: { backgroundColor: "#1a1a1a", borderTopColor: "#2a2a2a" },
-          tabBarActiveTintColor: "#d4a13d",
-          tabBarInactiveTintColor: "#666",
+          tabBarStyle: { backgroundColor: COLORS.ledgerInk, borderTopColor: COLORS.hairline },
+          tabBarActiveTintColor: COLORS.waxSeal,
+          tabBarInactiveTintColor: COLORS.parchmentFaint,
         }}
       >
         <Tab.Screen
@@ -85,7 +79,7 @@ export default function App() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: COLORS.ledgerInk,
     justifyContent: "center",
     alignItems: "center",
   },
