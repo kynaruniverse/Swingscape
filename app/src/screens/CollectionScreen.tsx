@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,20 @@ const TIER_COLORS: Record<Tier, string> = {
   obscure: "#b0698a",
   niche: "#d4a13d",
 };
+
+const TIER_LABELS: Record<Tier, string> = {
+  common: "COMMON",
+  familiar: "FAMILIAR",
+  uncommon: "UNCOMMON",
+  rare: "RARE",
+  obscure: "OBSCURE",
+  niche: "NICHE",
+};
+
+const TIER_ORDER: Tier[] = ["common", "familiar", "uncommon", "rare", "obscure", "niche"];
+
+// Rare-and-above discoveries get extra visual weight in the cabinet.
+const PROMINENT_TIERS: Set<Tier> = new Set(["rare", "obscure", "niche"]);
 
 type SortMode = "rarity" | "recent";
 
@@ -52,6 +66,23 @@ export default function CollectionScreen() {
       : new Date(b.foundAt).getTime() - new Date(a.foundAt).getTime()
   );
 
+  const tierCounts = useMemo(() => {
+    const counts: Record<Tier, number> = {
+      common: 0,
+      familiar: 0,
+      uncommon: 0,
+      rare: 0,
+      obscure: 0,
+      niche: 0,
+    };
+    for (const item of entries) {
+      if (counts[item.tier] !== undefined) {
+        counts[item.tier]++;
+      }
+    }
+    return counts;
+  }, [entries]);
+
   const handleClear = () => {
     Alert.alert(
       "Clear collection?",
@@ -73,11 +104,24 @@ export default function CollectionScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Collection</Text>
+        <Text style={styles.title}>WORD CABINET</Text>
         <Text style={styles.subtitle}>
-          {entries.length} rare {entries.length === 1 ? "find" : "finds"}
+          {entries.length} {entries.length === 1 ? "DISCOVERY" : "DISCOVERIES"}
         </Text>
       </View>
+
+      {entries.length > 0 && (
+        <View style={styles.tierSummary}>
+          {TIER_ORDER.map((tier) => (
+            <View key={tier} style={styles.tierSummaryRow}>
+              <Text style={[styles.tierSummaryLabel, { color: TIER_COLORS[tier] }]}>
+                {TIER_LABELS[tier]}
+              </Text>
+              <Text style={styles.tierSummaryCount}>{tierCounts[tier]}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={styles.sortRow}>
         <TouchableOpacity
@@ -106,31 +150,42 @@ export default function CollectionScreen() {
         style={styles.list}
         data={sorted}
         keyExtractor={(item) => item.word}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.word}>{item.word}</Text>
-              <View style={[styles.tierBadge, { borderColor: TIER_COLORS[item.tier] }]}>
-                <Text style={[styles.tierText, { color: TIER_COLORS[item.tier] }]}>
-                  {item.tier}
-                </Text>
+        renderItem={({ item }) => {
+          const prominent = PROMINENT_TIERS.has(item.tier);
+          return (
+            <View
+              style={[
+                styles.card,
+                prominent && styles.cardProminent,
+                prominent && { borderColor: TIER_COLORS[item.tier] },
+              ]}
+            >
+              <View style={styles.cardHeader}>
+                <Text style={styles.word}>{item.word.toUpperCase()}</Text>
+                <View style={[styles.tierBadge, { borderColor: TIER_COLORS[item.tier] }]}>
+                  <Text style={[styles.tierText, { color: TIER_COLORS[item.tier] }]}>
+                    {TIER_LABELS[item.tier]}
+                  </Text>
+                </View>
               </View>
+              <Text style={[styles.score, prominent && { color: TIER_COLORS[item.tier] }]}>
+                {item.rarity_score}
+              </Text>
+              {item.definition && (
+                <Text style={styles.definition}>{item.definition}</Text>
+              )}
+              <Text style={styles.meta}>Found between {item.pairContext}</Text>
+              <Text style={styles.date}>
+                First discovered{" "}
+                {new Date(item.foundAt).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </Text>
             </View>
-            <Text style={styles.meta}>
-              Score {item.rarity_score} · found between {item.pairContext}
-            </Text>
-            {item.definition && (
-              <Text style={styles.definition}>{item.definition}</Text>
-            )}
-            <Text style={styles.date}>
-              {new Date(item.foundAt).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
-            </Text>
-          </View>
-        )}
+          );
+        }}
         ListEmptyComponent={
           loaded ? (
             <Text style={styles.emptyText}>
@@ -153,8 +208,22 @@ export default function CollectionScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#1a1a1a" },
   header: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
-  title: { color: "#fff", fontSize: 26, fontWeight: "700" },
-  subtitle: { color: "#888", fontSize: 14, marginTop: 4 },
+  title: { color: "#fff", fontSize: 22, fontWeight: "800", letterSpacing: 1 },
+  subtitle: { color: "#888", fontSize: 13, marginTop: 4, letterSpacing: 0.5 },
+  tierSummary: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#202020",
+  },
+  tierSummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 3,
+  },
+  tierSummaryLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
+  tierSummaryCount: { color: "#ccc", fontSize: 12, fontWeight: "600" },
   sortRow: { flexDirection: "row", paddingHorizontal: 20, marginTop: 12, marginBottom: 8, gap: 8 },
   sortButton: {
     backgroundColor: "#262626",
@@ -171,11 +240,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginTop: 10,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
+  cardProminent: { backgroundColor: "#241f16", borderWidth: 1.5 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  word: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  word: { color: "#fff", fontSize: 17, fontWeight: "700", letterSpacing: 0.5 },
   tierBadge: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
-  tierText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
+  tierText: { fontSize: 11, fontWeight: "700" },
+  score: { color: "#ccc", fontSize: 20, fontWeight: "800", marginTop: 6 },
   meta: { color: "#999", fontSize: 13, marginTop: 6 },
   definition: { color: "#bbb", fontSize: 13, marginTop: 6, lineHeight: 18, fontStyle: "italic" },
   date: { color: "#666", fontSize: 12, marginTop: 4 },

@@ -36,6 +36,24 @@ except FileNotFoundError:
 
 WORD_PATTERN = re.compile(r"^[a-z]+$")
 
+# Offensive-term filter — separate from BLOCK_LIST (which only covers
+# proper nouns). Standard British word-list sources include profanity
+# and slurs; a word game should never surface these as a "discovery".
+# This is a starter list, not exhaustive — same caveat as BLOCK_LIST,
+# expect to extend it during playtesting whenever something slips through.
+OFFENSIVE_TERMS = {
+    "fuck", "fucker", "fucking", "fucked", "motherfucker",
+    "shit", "shitter", "shitty", "bullshit",
+    "cunt", "cocksucker", "cock", "dick", "dickhead", "prick",
+    "bitch", "bastard", "asshole", "arsehole", "twat", "wanker",
+    "wank", "spastic", "retard", "retarded",
+    "nigger", "nigga", "chink", "spic", "wetback", "gook", "kike",
+    "faggot", "fag", "dyke", "tranny", "paki", "coon", "raghead",
+    "slut", "whore", "skank", "hooker",
+    "rape", "rapist",
+    "nazi", "hitler",
+}
+
 
 def rarity_score(zipf: float) -> int:
     """Convert a zipf frequency (~0-8 scale) into a 0-1000 rarity score.
@@ -64,8 +82,22 @@ def main():
 
     print(f"Loaded {len(raw_words)} raw words")
 
+    # Dedupe while preserving first-seen order — the source list can
+    # contain the same word twice (e.g. differing only in a variant
+    # spelling entry elsewhere), and duplicates just bloat the shipped
+    # JSON for no gameplay benefit.
+    seen = set()
+    deduped_words = []
+    for w in raw_words:
+        if w not in seen:
+            seen.add(w)
+            deduped_words.append(w)
+    skipped_duplicate = len(raw_words) - len(deduped_words)
+    raw_words = deduped_words
+
     entries = []
     skipped_pattern = skipped_length = skipped_block = skipped_norare = 0
+    skipped_offensive = 0
 
     for word in raw_words:
         if not WORD_PATTERN.match(word):
@@ -76,6 +108,9 @@ def main():
             continue
         if word in BLOCK_LIST:
             skipped_block += 1
+            continue
+        if word in OFFENSIVE_TERMS:
+            skipped_offensive += 1
             continue
 
         zipf = zipf_frequency(word, "en")
@@ -94,8 +129,9 @@ def main():
 
     print(f"Kept {len(entries)} words")
     print(f"Skipped: pattern={skipped_pattern} length={skipped_length} "
-          f"blocklist={skipped_block} no-frequency-data={skipped_norare}")
-
+          f"blocklist={skipped_block} offensive={skipped_offensive} "
+          f"no-frequency-data={skipped_norare} duplicates={skipped_duplicate}")
+          
     tier_counts = {}
     for e in entries:
         tier_counts[e["tier"]] = tier_counts.get(e["tier"], 0) + 1
