@@ -3,6 +3,8 @@ import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+import { useFonts, DMSerifDisplay_400Regular } from "@expo-google-fonts/dm-serif-display";
 import { WordStore, WordEntry } from "./src/logic/wordStore";
 import ExploreScreen from "./src/screens/ExploreScreen";
 import CollectionScreen from "./src/screens/CollectionScreen";
@@ -15,6 +17,7 @@ const Tab = createBottomTabNavigator();
 
 export default function App() {
   const [store, setStore] = useState<WordStore | null>(null);
+  const [fontsLoaded] = useFonts({ DMSerifDisplay_400Regular });
 
   useEffect(() => {
     // Constructing the WordStore builds a Map of ~78k entries — cheap
@@ -22,7 +25,7 @@ export default function App() {
     setStore(new WordStore(wordData as WordEntry[]));
   }, []);
 
-  if (!store) {
+  if (!store || !fontsLoaded) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator color="#d4a13d" size="large" />
@@ -55,14 +58,24 @@ export default function App() {
       >
         <Tab.Screen
           name="Explore"
-          options={{ tabBarLabel: "Explore" }}
+          options={{
+            tabBarLabel: "Explore",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="compass-outline" size={size} color={color} />
+            ),
+          }}
         >
           {() => <ExploreScreen store={store} difficulty="medium" />}
         </Tab.Screen>
         <Tab.Screen
           name="Collection"
           component={CollectionScreen}
-          options={{ tabBarLabel: "Collection" }}
+          options={{
+            tabBarLabel: "Collection",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="library-outline" size={size} color={color} />
+            ),
+          }}
         />
       </Tab.Navigator>
     </NavigationContainer>

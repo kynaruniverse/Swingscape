@@ -208,7 +208,7 @@ export default function CollectionScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#1a1a1a" },
   header: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
-  title: { color: "#fff", fontSize: 22, fontWeight: "800", letterSpacing: 1 },
+  title: { color: "#fff", fontSize: 26, fontFamily: "DMSerifDisplay_400Regular", letterSpacing: 0.5 },
   subtitle: { color: "#888", fontSize: 13, marginTop: 4, letterSpacing: 0.5 },
   tierSummary: {
     marginHorizontal: 20,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   word: { color: "#fff", fontSize: 17, fontWeight: "700", letterSpacing: 0.5 },
   tierBadge: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
   tierText: { fontSize: 11, fontWeight: "700" },
-  score: { color: "#ccc", fontSize: 20, fontWeight: "800", marginTop: 6 },
+  score: { color: "#ccc", fontSize: 24, fontFamily: "DMSerifDisplay_400Regular", marginTop: 6 },
   meta: { color: "#999", fontSize: 13, marginTop: 6 },
   definition: { color: "#bbb", fontSize: 13, marginTop: 6, lineHeight: 18, fontStyle: "italic" },
   date: { color: "#666", fontSize: 12, marginTop: 4 },
