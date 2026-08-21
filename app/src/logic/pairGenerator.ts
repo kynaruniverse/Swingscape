@@ -47,6 +47,20 @@ function randomInt(min: number, max: number): number {
 }
 
 /**
+ * Rejects bookend pairs that are too easy to "solve" without ever
+ * knowing an in-between word — the design doc's "A" / "AB" example.
+ * True whenever the shorter bookend is an exact prefix of the longer
+ * one (e.g. "cat" / "cats"), which is a different failure mode from
+ * two same-length words that merely share some letters (e.g. "car" /
+ * "cat" is a perfectly good pair — there's a real gap in between).
+ */
+function isTrivialPair(wordA: string, wordB: string): boolean {
+  const shorter = wordA.length <= wordB.length ? wordA : wordB;
+  const longer = wordA.length <= wordB.length ? wordB : wordA;
+  return longer.startsWith(shorter);
+}
+
+/**
  * Attempts to generate a valid pair for the given difficulty.
  * Retries with a fresh random starting point on failure (rejection
  * sampling) — cheap enough to do many attempts since everything is
@@ -77,6 +91,9 @@ export function generatePair(
     for (let endPos = startPos + 1; endPos < bookendCandidates.length; endPos++) {
       const endIdx = bookendCandidates[endPos];
       const wordB = store.get(endIdx).word;
+
+      if (isTrivialPair(wordA, wordB)) continue; // e.g. "cat" / "cats" — too obvious
+
       const gapSize = store.gapCount(wordA, wordB);
 
       if (gapSize < minEntries) continue; // too narrow, keep extending

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from "react-native";
 import { WordStore, Tier, WordEntry } from "../logic/wordStore";
 import { generatePair, Difficulty } from "../logic/pairGenerator";
@@ -61,6 +62,59 @@ type FeedbackState =
   | { kind: "already_found" }
   | { kind: "success"; entry: WordEntry; isNewBest: boolean };
 
+// Rarity controls how dramatic the reveal feels, not just the reveal
+// itself — common finds are quick and quiet, niche finds get a longer,
+// more emphatic pulse. Never so dramatic it fights the next guess.
+const REVEAL_DURATIONS: Record<Tier, number> = {
+  common: 150,
+  familiar: 180,
+  uncommon: 220,
+  rare: 280,
+  obscure: 340,
+  niche: 420,
+};
+
+function AnimatedResultCard({
+  children,
+  tier,
+  isNewBest,
+}: {
+  children: React.ReactNode;
+  tier?: Tier;
+  isNewBest?: boolean;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(8)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const duration = tier ? REVEAL_DURATIONS[tier] : 180;
+
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration, useNativeDriver: true }),
+    ]).start(() => {
+      if (isNewBest) {
+        const peak = tier === "niche" ? 1.18 : tier === "obscure" ? 1.12 : 1.08;
+        Animated.sequence([
+          Animated.timing(scale, { toValue: peak, duration: 120, useNativeDriver: true }),
+          Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }),
+        ]).start();
+      }
+    });
+    // Runs once per mount — this component is remounted via a changing
+    // `key` prop every time a new result comes in, so the animation
+    // always plays fresh rather than replaying on unrelated re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }, { scale }] }}>
+      {children}
+    </Animated.View>
+  );
+}
+
 interface Props {
   store: WordStore;
   difficulty?: Difficulty;
@@ -71,6 +125,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [collectionToast, setCollectionToast] = useState<string | null>(null);
+  const [resultKey, setResultKey] = useState(0);
   const navigation = useNavigation<any>();
   
   function newState(s: WordStore, diff: Difficulty): RoundState | null {
@@ -90,6 +145,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
 
     const { result, nextState } = submitGuess(state, store, input);
     setCollectionToast(null);
+    setResultKey((k) => k + 1);
 
     switch (result.status) {
       case "round_over":
@@ -325,7 +381,15 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
           </TouchableOpacity>
         </View>
 
-        {feedback && renderFeedback(feedback)}
+        {feedback && (
+          <AnimatedResultCard
+            key={resultKey}
+            tier={feedback.kind === "success" ? feedback.entry.tier : undefined}
+            isNewBest={feedback.kind === "success" && feedback.isNewBest}
+          >
+            {renderFeedback(feedback)}
+          </AnimatedResultCard>
+        )}
         {collectionToast && <Text style={styles.collectionToast}>{collectionToast}</Text>}
 
         <FlatList
