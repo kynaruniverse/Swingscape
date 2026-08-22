@@ -6,10 +6,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "splash": { "backgroundColor": "#1a1a1a" },
+    "splash": { "backgroundColor": "#f4ecd8" },
     "android": {
       "package": "co.blackwooddigital.niche",
-      "adaptiveIcon": { "backgroundColor": "#1a1a1a" }
+      "adaptiveIcon": { "backgroundColor": "#f4ecd8" }
     },
     "ios": {
       "bundleIdentifier": "co.blackwooddigital.niche"

@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, FlatList, SafeAreaView, TouchableOpacity } from "react-native";
+import TopBar from "../components/TopBar";
 import TierSummary from "../components/TierSummary";
 import CollectionCard from "../components/CollectionCard";
 import { useCollection } from "../hooks/useCollection";
@@ -11,6 +12,8 @@ export default function CollectionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <TopBar eyebrow="CABINET" />
+
       <View style={styles.header}>
         <Text style={styles.title}>WORD CABINET</Text>
         <Text style={styles.subtitle}>
@@ -48,6 +51,13 @@ export default function CollectionScreen() {
           loaded ? (
             <Text style={styles.emptyText}>
               No rare finds yet — play Explore and anything rare or better gets saved here.
+            </Text>
+          ) : null
+        }
+        ListFooterComponent={
+          sorted.length > 0 ? (
+            <Text style={styles.footerTip}>
+              Rare-and-above discoveries are added automatically — no need to save manually.
             </Text>
           ) : null
         }

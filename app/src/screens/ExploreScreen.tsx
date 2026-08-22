@@ -14,9 +14,11 @@ import { Difficulty } from "../logic/pairGenerator";
 import { useNavigation } from "@react-navigation/native";
 import { TIER_COLORS, TIER_LABELS } from "../theme/tiers";
 import { COLORS } from "../theme/appTheme";
+import TopBar from "../components/TopBar";
 import AnimatedResultCard from "../components/AnimatedResultCard";
 import FeedbackCard from "../components/FeedbackCard";
 import RarityMeter from "../components/RarityMeter";
+import FieldNotesCard from "../components/FieldNotesCard";
 import { useExploreRound } from "../hooks/useExploreRound";
 import styles from "./ExploreScreen.styles";
 
@@ -46,6 +48,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   if (!state) {
     return (
       <SafeAreaView style={styles.container}>
+        <TopBar eyebrow="EXPLORE" />
         <Text style={styles.errorText}>Couldn't generate a pair. Try again.</Text>
         <TouchableOpacity style={styles.button} onPress={handleNewPair}>
           <Text style={styles.buttonText}>Retry</Text>
@@ -57,6 +60,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   if (roundOver) {
     return (
       <SafeAreaView style={styles.container}>
+        <TopBar eyebrow="EXPLORE" />
         <View style={styles.endScreen}>
           <Text style={styles.endHeading}>ROUND COMPLETE</Text>
 
@@ -107,6 +111,8 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <SafeAreaView style={styles.container}>
+        <TopBar eyebrow="EXPLORE" />
+
         <View style={styles.pairContainer}>
           <Text style={styles.bookend}>{state.pair.wordA.toUpperCase()}</Text>
           <Text style={styles.arrow}>—</Text>
@@ -116,7 +122,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
           {state.maxAttempts - state.attemptsUsed} GUESSES LEFT
         </Text>
 
-        {best && (
+        {best ? (
           <View style={[styles.bestPanel, { borderColor: TIER_COLORS[best.tier] }]}>
             <Text style={styles.bestPanelLabel}>YOUR BEST</Text>
             <Text style={[styles.bestPanelScore, { color: TIER_COLORS[best.tier] }]}>
@@ -124,9 +130,14 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
             </Text>
             <Text style={styles.bestPanelWord}>{best.word.toUpperCase()}</Text>
           </View>
+        ) : (
+          <View style={styles.bestPanelEmpty}>
+            <Text style={styles.bestPanelLabel}>YOUR BEST</Text>
+            <Text style={styles.bestPanelEmptyText}>AWAITING DISCOVERY</Text>
+          </View>
         )}
 
-        {best && <RarityMeter bestTier={best.tier} progressPct={progressPct} />}
+        <RarityMeter bestTier={best?.tier} progressPct={progressPct} />
 
         <View style={styles.inputRow}>
           <TextInput
@@ -135,7 +146,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
             onChangeText={setInput}
             onSubmitEditing={handleSubmit}
             placeholder="Type a word..."
-            placeholderTextColor={COLORS.parchmentFaint}
+            placeholderTextColor={COLORS.inkFaint}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="done"
@@ -159,20 +170,23 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
         )}
         {collectionToast && <Text style={styles.collectionToast}>{collectionToast}</Text>}
 
-        <FlatList
-          style={styles.findsList}
-          data={finds}
-          keyExtractor={(item) => item.word}
-          renderItem={({ item }) => (
-            <View style={styles.findRow}>
-              <Text style={styles.findWord}>{item.word}</Text>
-              <Text style={[styles.findTier, { color: TIER_COLORS[item.tier] }]}>
-                {item.tier} · {item.rarity_score}
-              </Text>
-            </View>
-          )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No finds yet — give it a go</Text>}
-        />
+        {finds.length === 0 ? (
+          <FieldNotesCard />
+        ) : (
+          <FlatList
+            style={styles.findsList}
+            data={finds}
+            keyExtractor={(item) => item.word}
+            renderItem={({ item }) => (
+              <View style={styles.findRow}>
+                <Text style={styles.findWord}>{item.word}</Text>
+                <Text style={[styles.findTier, { color: TIER_COLORS[item.tier] }]}>
+                  {item.tier} · {item.rarity_score}
+                </Text>
+              </View>
+            )}
+          />
+        )}
 
         <TouchableOpacity style={styles.newPairButton} onPress={handleNewPair}>
           <Text style={styles.newPairButtonText}>New Pair</Text>

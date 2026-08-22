@@ -1,15 +1,17 @@
 import { Tier } from "../logic/wordStore";
 
 // Reads as a hand-inked classification scale rather than a color-picker
-// gradient: graphite pencil at the low end, warming toward the Wax Seal
-// copper (see appTheme.ts) as rarity climbs.
+// gradient: graphite pencil at the low end, warming toward a deep
+// burnt-copper as rarity climbs. Values are darkened relative to a
+// dark-mode version of this scale — on cream paper, light/pastel tones
+// wash out, so every tier color needs to carry its own contrast.
 export const TIER_COLORS: Record<Tier, string> = {
-  common: "#6b6a62",
-  familiar: "#6f8a5e",
-  uncommon: "#5b84a0",
-  rare: "#8272a8",
-  obscure: "#a8607e",
-  niche: "#d4954a",
+  common: "#5c584c",
+  familiar: "#4f6b3f",
+  uncommon: "#3d6684",
+  rare: "#6a4f92",
+  obscure: "#8a3f5c",
+  niche: "#b06a1e",
 };
 
 export const TIER_LABELS: Record<Tier, string> = {

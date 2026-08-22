@@ -1,16 +1,18 @@
-// Ledger/specimen-cabinet palette. Named for what they evoke, not what
-// they render as, so a future retint changes meaning-in-code, not just
-// the hex.
+// Light parchment/ink palette — a field-guide page rather than a dark
+// app default. Key names describe role (paper/ink/accent), not a fixed
+// light-or-dark value, so a future retint changes meaning-in-code, not
+// just the hex.
 export const COLORS = {
-  ledgerInk: "#14181a", // base background — blue-green cast, not flat black
-  vellumPanel: "#1f2422", // card/panel surface, one step up from base
-  vellumPanelRaised: "#262b28", // inputs, buttons-at-rest
-  parchment: "#e8dfc8", // primary text — warm off-white, not pure #fff
-  parchmentMuted: "#a89f8a", // secondary text
-  parchmentFaint: "#5f5b4d", // tertiary/disabled text, hairlines
-  waxSeal: "#c17a3d", // single warm accent — CTAs, best-find moments only
-  waxSealMuted: "#8a5a30", // pressed/inactive state of the accent
-  hairline: "#2c3230", // borders, dividers
+  paper: "#f4ecd8", // base background — warm cream, not pure white
+  paperPanel: "#e9dfc2", // card/panel surface, one step down from base
+  paperPanelRaised: "#ddcfa8", // inputs, buttons-at-rest
+  paperPanelHighlight: "#f0e2b8", // prominent/highlighted card surface
+  ink: "#2b2318", // primary text — warm near-black, not pure #000
+  inkMuted: "#6b5f47", // secondary text
+  inkFaint: "#9c8f6d", // tertiary/disabled text
+  waxSeal: "#a8562a", // single warm accent — CTAs, best-find moments only
+  waxSealMuted: "#c9814f", // pressed/inactive state of the accent
+  hairline: "#cabf98", // borders, dividers
 } as const;
 
 // Serif for specimen names (words), mono for anything stamped/measured
@@ -23,12 +25,12 @@ export const FONTS = {
 } as const;
 
 export const NAV_THEME = {
-  dark: true,
+  dark: false,
   colors: {
     primary: COLORS.waxSeal,
-    background: COLORS.ledgerInk,
-    card: COLORS.ledgerInk,
-    text: COLORS.parchment,
+    background: COLORS.paper,
+    card: COLORS.paper,
+    text: COLORS.ink,
     border: COLORS.hairline,
     notification: COLORS.waxSeal,
   },
