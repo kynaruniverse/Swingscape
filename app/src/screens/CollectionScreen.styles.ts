@@ -1,34 +1,34 @@
 import { StyleSheet } from "react-native";
-import { COLORS, FONTS } from "../theme/appTheme";
+import { COLORS, FONTS, DEPTH } from "../theme/appTheme";
 
 export default StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.paper },
+  container: { flex: 1, backgroundColor: COLORS.bg },
   header: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   title: {
     color: COLORS.ink,
-    fontSize: 26,
+    fontSize: 28,
     fontFamily: FONTS.display,
     letterSpacing: 0.5,
   },
   subtitle: {
     color: COLORS.inkFaint,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.monoBold,
     fontSize: 11,
     marginTop: 4,
     letterSpacing: 1,
   },
-  sortRow: { flexDirection: "row", paddingHorizontal: 20, marginTop: 12, marginBottom: 8, gap: 8 },
+  sortRow: { flexDirection: "row", paddingHorizontal: 20, marginTop: 14, marginBottom: 10, gap: 10 },
   sortButton: {
-    backgroundColor: COLORS.paperPanelRaised,
-    borderRadius: 4,
+    backgroundColor: COLORS.surface,
+    borderRadius: DEPTH.radiusSm,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: COLORS.hairline,
+    paddingVertical: 9,
+    borderWidth: 2,
+    borderColor: COLORS.outline,
   },
-  sortButtonActive: { backgroundColor: COLORS.waxSeal, borderColor: COLORS.waxSeal },
-  sortButtonText: { color: COLORS.inkMuted, fontFamily: FONTS.mono, fontSize: 12 },
-  sortButtonTextActive: { color: COLORS.paper, fontFamily: FONTS.monoBold },
+  sortButtonActive: { backgroundColor: COLORS.primary },
+  sortButtonText: { color: COLORS.inkMuted, fontFamily: FONTS.monoBold, fontSize: 12 },
+  sortButtonTextActive: { color: COLORS.cream, fontFamily: FONTS.monoBold },
   list: { flex: 1, paddingHorizontal: 20 },
   emptyContainer: { flex: 1, justifyContent: "center" },
   emptyText: {

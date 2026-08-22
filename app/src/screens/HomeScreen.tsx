@@ -5,7 +5,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { loadCollection } from "../logic/collectionStore";
 import { getStreak } from "../logic/dailyStore";
 import { getCatalogTotal } from "../logic/catalogStore";
-import PaperTexture from "../components/PaperTexture";
+import GameButton from "../components/GameButton";
 import { COLORS, FONTS } from "../theme/appTheme";
 
 export default function HomeScreen() {
@@ -34,13 +34,12 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <PaperTexture />
       <TouchableOpacity
         style={styles.settingsButton}
         onPress={() => navigation.navigate("Settings")}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
-        <Ionicons name="settings-outline" size={20} color={COLORS.inkMuted} />
+        <Ionicons name="settings-outline" size={22} color={COLORS.inkMuted} />
       </TouchableOpacity>
 
       <View style={styles.center}>
@@ -50,46 +49,48 @@ export default function HomeScreen() {
           <Text style={styles.catalogText}>SPECIMEN NO. {catalogTotal} CATALOGUED</Text>
         )}
 
-        <TouchableOpacity
-          style={styles.playButton}
+        <GameButton
+          label="PLAY"
           onPress={() => navigation.navigate("Game", { screen: "Explore" })}
-        >
-          <Text style={styles.playButtonText}>PLAY</Text>
-        </TouchableOpacity>
+          style={styles.playButton}
+        />
 
-        <TouchableOpacity
-          style={styles.cabinetLink}
+        <GameButton
+          label={streakCount > 0 ? `DAILY DUEL · ${streakCount} DAY STREAK` : "DAILY DUEL"}
           onPress={() => navigation.navigate("Game", { screen: "Daily" })}
-        >
-          <Text style={styles.cabinetLinkText}>
-            {streakCount > 0 ? `DAILY DUEL · ${streakCount} DAY STREAK` : "DAILY DUEL"}
-          </Text>
-        </TouchableOpacity>
+          color={COLORS.secondary}
+          shadowColor={COLORS.secondaryShadow}
+          small
+          style={styles.secondaryButton}
+        />
 
-        <TouchableOpacity
-          style={styles.cabinetLink}
-          onPress={() => navigation.navigate("Game", { screen: "Collection" })}
-        >
-          <Text style={styles.cabinetLinkText}>
-            {discoveryCount === null
+        <GameButton
+          label={
+            discoveryCount === null
               ? "WORD CABINET"
-              : `WORD CABINET · ${discoveryCount} ${discoveryCount === 1 ? "FIND" : "FINDS"}`}
-          </Text>
-        </TouchableOpacity>
+              : `WORD CABINET · ${discoveryCount} ${discoveryCount === 1 ? "FIND" : "FINDS"}`
+          }
+          onPress={() => navigation.navigate("Game", { screen: "Collection" })}
+          color={COLORS.surface}
+          shadowColor={COLORS.inkFaint}
+          textColor={COLORS.ink}
+          small
+          style={styles.secondaryButton}
+        />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.paper },
+  container: { flex: 1, backgroundColor: COLORS.bg },
   settingsButton: { alignSelf: "flex-end", padding: 16 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 24 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 24, width: "100%" },
   wordmark: {
     color: COLORS.ink,
-    fontSize: 44,
+    fontSize: 48,
     fontFamily: FONTS.display,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   tagline: {
     color: COLORS.inkMuted,
@@ -100,29 +101,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   catalogText: {
-    color: COLORS.waxSealMuted,
-    fontFamily: FONTS.mono,
+    color: COLORS.primaryShadow,
+    fontFamily: FONTS.monoBold,
     fontSize: 10,
     letterSpacing: 1.5,
-    marginBottom: 32,
+    marginBottom: 28,
   },
-  playButton: {
-    backgroundColor: COLORS.waxSeal,
-    borderRadius: 4,
-    paddingHorizontal: 56,
-    paddingVertical: 16,
-  },
-  playButtonText: {
-    color: COLORS.paper,
-    fontFamily: FONTS.monoBold,
-    fontSize: 16,
-    letterSpacing: 2,
-  },
-  cabinetLink: { marginTop: 24, paddingVertical: 10 },
-  cabinetLinkText: {
-    color: COLORS.inkMuted,
-    fontFamily: FONTS.mono,
-    fontSize: 12,
-    letterSpacing: 1.5,
-  },
+  playButton: { width: "100%", marginBottom: 18 },
+  secondaryButton: { width: "100%", marginBottom: 14 },
 });

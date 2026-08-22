@@ -3,25 +3,25 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   FlatList,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { WordStore } from "../logic/wordStore";
-import { TIER_COLORS, TIER_LABELS } from "../theme/tiers";
+import { TIER_COLORS, TIER_SHADOW_COLORS, TIER_LABELS } from "../theme/tiers";
 import { COLORS } from "../theme/appTheme";
 import TopBar from "../components/TopBar";
 import AnimatedResultCard from "../components/AnimatedResultCard";
 import FeedbackCard from "../components/FeedbackCard";
 import RarityMeter from "../components/RarityMeter";
-import FieldNotesCard from "../components/FieldNotesCard";
 import SpecimenCard from "../components/SpecimenCard";
+import GameButton from "../components/GameButton";
+import GameCard from "../components/GameCard";
 import { shareSpecimenCard } from "../logic/shareSpecimen";
 import { useDailyRound } from "../hooks/useDailyRound";
-import PaperTexture from "../components/PaperTexture";
 import styles from "./DailyScreen.styles";
 
 interface Props {
@@ -32,7 +32,7 @@ function StreakRow({ current }: { current: number }) {
   if (current <= 0) return null;
   return (
     <View style={styles.streakRow}>
-      <Text style={styles.streakValue}>{current}</Text>
+      <Text style={styles.streakValue}>🔥 {current}</Text>
       <Text style={styles.streakLabel}>DAY STREAK</Text>
     </View>
   );
@@ -64,10 +64,9 @@ export default function DailyScreen({ store }: Props) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <PaperTexture />
         <TopBar eyebrow="DAILY" />
         <View style={styles.centerFill}>
-          <ActivityIndicator color={COLORS.waxSeal} />
+          <ActivityIndicator color={COLORS.primary} />
         </View>
       </SafeAreaView>
     );
@@ -79,7 +78,6 @@ export default function DailyScreen({ store }: Props) {
     const result = todayResult;
     return (
       <SafeAreaView style={styles.container}>
-        <PaperTexture />
         <TopBar eyebrow="DAILY" />
         <View style={[styles.centerFill, { paddingHorizontal: 24 }]}>
           <Text style={styles.resultHeading}>TODAY'S DUEL COMPLETE</Text>
@@ -87,18 +85,29 @@ export default function DailyScreen({ store }: Props) {
 
           {result?.best ? (
             <>
-              <Text style={styles.resultBestLabel}>BEST FIND</Text>
-              <Text style={styles.resultBestWord}>{result.best.word.toUpperCase()}</Text>
-              <Text style={[styles.resultBestScore, { color: TIER_COLORS[result.best.tier] }]}>
-                {result.best.rarity_score}
-              </Text>
-              <Text style={styles.resultBestTier}>{TIER_LABELS[result.best.tier]}</Text>
-              <TouchableOpacity
-                style={styles.shareButton}
-                onPress={() => shareSpecimenCard(specimenRef)}
+              <GameCard
+                borderColor={TIER_COLORS[result.best.tier]}
+                shadowColor={TIER_SHADOW_COLORS[result.best.tier]}
+                style={styles.resultBestCardInner}
               >
-                <Text style={styles.shareButtonText}>SHARE FIND</Text>
-              </TouchableOpacity>
+                <Text style={styles.resultBestLabel}>BEST FIND</Text>
+                <Text style={styles.resultBestWord}>{result.best.word.toUpperCase()}</Text>
+                <Text style={[styles.resultBestScore, { color: TIER_COLORS[result.best.tier] }]}>
+                  {result.best.rarity_score}
+                </Text>
+                <Text style={[styles.resultBestTier, { color: TIER_COLORS[result.best.tier] }]}>
+                  {TIER_LABELS[result.best.tier]}
+                </Text>
+              </GameCard>
+              <GameButton
+                label="SHARE FIND"
+                onPress={() => shareSpecimenCard(specimenRef)}
+                color={COLORS.surface}
+                shadowColor={COLORS.inkFaint}
+                textColor={COLORS.ink}
+                small
+                style={{ marginTop: 16, width: "100%" }}
+              />
               <View style={styles.offscreenCapture} pointerEvents="none">
                 <SpecimenCard ref={specimenRef} entry={result.best} />
               </View>
@@ -127,7 +136,6 @@ export default function DailyScreen({ store }: Props) {
   if (!state) {
     return (
       <SafeAreaView style={styles.container}>
-        <PaperTexture />
         <TopBar eyebrow="DAILY" />
         <View style={styles.centerFill}>
           <Text style={styles.resultBestTier}>Couldn't load today's pair. Try again shortly.</Text>
@@ -139,36 +147,43 @@ export default function DailyScreen({ store }: Props) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <SafeAreaView style={styles.container}>
-        <PaperTexture />
         <TopBar eyebrow="DAILY" />
         <StreakRow current={streak.current} />
 
-        <View style={styles.pairContainer}>
-          <Text style={styles.bookend}>{state.pair.wordA.toUpperCase()}</Text>
-          <Text style={styles.arrow}>—</Text>
-          <Text style={styles.bookend}>{state.pair.wordB.toUpperCase()}</Text>
-        </View>
-        <Text style={styles.attemptsLeft}>
-          {state.maxAttempts - state.attemptsUsed} GUESSES LEFT · ONE ROUND A DAY
-        </Text>
+        <GameCard style={styles.pairCard}>
+          <View style={styles.pairRow}>
+            <Text style={styles.bookend}>{state.pair.wordA.toUpperCase()}</Text>
+            <View style={styles.arrowPill}>
+              <Text style={styles.arrow}>→</Text>
+            </View>
+            <Text style={styles.bookend}>{state.pair.wordB.toUpperCase()}</Text>
+          </View>
+        </GameCard>
 
-        <View style={styles.hintRow}>
-          {hint && <Text style={styles.hintText}>{hint}</Text>}
+        <View style={styles.attemptsRow}>
+          <Text style={styles.attemptsLeft}>
+            {state.maxAttempts - state.attemptsUsed} GUESSES LEFT · ONE ROUND A DAY
+          </Text>
           {hintAvailable && (
             <TouchableOpacity onPress={handleHint} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.hintButtonText}>{hint ? "REVEAL ANOTHER LETTER" : "NEED A HINT? (−1 GUESS)"}</Text>
+              <Text style={styles.hintButtonText}>{hint ? "REVEAL ANOTHER" : "HINT (−1)"}</Text>
             </TouchableOpacity>
           )}
         </View>
+        {hint && <Text style={styles.hintText}>{hint}</Text>}
 
         {best ? (
-          <View style={[styles.bestPanel, { borderColor: TIER_COLORS[best.tier] }]}>
+          <GameCard
+            borderColor={TIER_COLORS[best.tier]}
+            shadowColor={TIER_SHADOW_COLORS[best.tier]}
+            style={styles.bestPanelInner}
+          >
             <Text style={styles.bestPanelLabel}>YOUR BEST</Text>
             <Text style={[styles.bestPanelScore, { color: TIER_COLORS[best.tier] }]}>
               {best.rarity_score} · {TIER_LABELS[best.tier]}
             </Text>
             <Text style={styles.bestPanelWord}>{best.word.toUpperCase()}</Text>
-          </View>
+          </GameCard>
         ) : (
           <View style={styles.bestPanelEmpty}>
             <Text style={styles.bestPanelLabel}>YOUR BEST</Text>
@@ -190,9 +205,7 @@ export default function DailyScreen({ store }: Props) {
             autoCorrect={false}
             returnKeyType="done"
           />
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Go</Text>
-          </TouchableOpacity>
+          <GameButton label="GO" onPress={handleSubmit} small style={styles.goButton} />
         </View>
 
         {feedback && (
@@ -210,7 +223,7 @@ export default function DailyScreen({ store }: Props) {
         {collectionToast && <Text style={styles.collectionToast}>{collectionToast}</Text>}
 
         {finds.length === 0 ? (
-          <FieldNotesCard />
+          <Text style={styles.tip}>One shared pair a day — everyone's guessing the same words as you.</Text>
         ) : (
           <FlatList
             style={styles.findsList}
@@ -218,6 +231,7 @@ export default function DailyScreen({ store }: Props) {
             keyExtractor={(item) => item.word}
             renderItem={({ item }) => (
               <View style={styles.findRow}>
+                <View style={[styles.findDot, { backgroundColor: TIER_COLORS[item.tier] }]} />
                 <Text style={styles.findWord}>{item.word}</Text>
                 <Text style={[styles.findTier, { color: TIER_COLORS[item.tier] }]}>
                   {item.tier} · {item.rarity_score}

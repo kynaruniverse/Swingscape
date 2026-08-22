@@ -4,7 +4,6 @@ import TopBar from "../components/TopBar";
 import TierSummary from "../components/TierSummary";
 import CollectionCard from "../components/CollectionCard";
 import { useCollection } from "../hooks/useCollection";
-import PaperTexture from "../components/PaperTexture";
 import styles from "./CollectionScreen.styles";
 
 export default function CollectionScreen() {
@@ -13,7 +12,6 @@ export default function CollectionScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-        <PaperTexture />
       <TopBar eyebrow="CABINET" />
 
       <View style={styles.header}>

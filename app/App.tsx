@@ -6,7 +6,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import * as SplashScreen from "expo-splash-screen";
-import { useFonts, DMSerifDisplay_400Regular } from "@expo-google-fonts/dm-serif-display";
+import { useFonts, Fredoka_600SemiBold, Fredoka_700Bold } from "@expo-google-fonts/fredoka";
 import { JetBrainsMono_500Medium, JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono";
 import { WordStore, WordEntry } from "./src/logic/wordStore";
 import HomeScreen from "./src/screens/HomeScreen";
@@ -34,8 +34,8 @@ function GameTabs({ store }: { store: WordStore }) {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: COLORS.paperPanel, borderTopColor: COLORS.hairline },
-        tabBarActiveTintColor: COLORS.waxSeal,
+        tabBarStyle: { backgroundColor: COLORS.surface, borderTopColor: COLORS.hairline },
+        tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.inkFaint,
       }}
     >
@@ -75,7 +75,8 @@ function GameTabs({ store }: { store: WordStore }) {
 export default function App() {
   const [store, setStore] = useState<WordStore | null>(null);
   const [fontsLoaded] = useFonts({
-    DMSerifDisplay_400Regular,
+    Fredoka_600SemiBold,
+    Fredoka_700Bold,
     JetBrainsMono_500Medium,
     JetBrainsMono_700Bold,
   });
@@ -98,7 +99,7 @@ export default function App() {
     return (
       <View style={styles.loading}>
         <Text style={styles.loadingWordmark}>NICHE</Text>
-        <ActivityIndicator color={COLORS.waxSeal} size="small" style={{ marginTop: 24 }} />
+        <ActivityIndicator color={COLORS.primary} size="small" style={{ marginTop: 24 }} />
       </View>
     );
   }
@@ -126,7 +127,7 @@ export default function App() {
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: COLORS.paper,
+    backgroundColor: COLORS.bg,
     justifyContent: "center",
     alignItems: "center",
   },

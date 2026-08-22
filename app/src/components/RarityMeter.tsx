@@ -1,8 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Tier } from "../logic/wordStore";
-import { TIER_COLORS, TIER_LABELS, TIER_ORDER } from "../theme/tiers";
-import { COLORS, FONTS } from "../theme/appTheme";
+import { TIER_COLORS, TIER_SHADOW_COLORS, TIER_LABELS, TIER_ORDER } from "../theme/tiers";
+import { COLORS, FONTS, DEPTH } from "../theme/appTheme";
 
 interface Props {
   // Undefined until the player's first find of the round.
@@ -12,34 +12,46 @@ interface Props {
   progressPct?: number;
 }
 
-// Styled as a field-guide classification key: a ranked scale with tick
-// marks, the achieved rank picked out in its tier color and the rest
-// left as quiet, unfilled ticks — rather than a flat row of dots.
+// A chunky "level meter": six solid blocks, one per tier. Unearned
+// tiers sit flat and pale; earned tiers snap to full tier color with
+// their own offset shadow, and the current best block pops up slightly
+// taller than the rest — reads as a game rank-up strip, not a chart.
 export default function RarityMeter({ bestTier, progressPct }: Props) {
   const bestIndex = bestTier ? TIER_ORDER.indexOf(bestTier) : -1;
 
   return (
     <View style={styles.rarityMeter}>
-      <View style={styles.chartLabelRow}>
-        <Text style={styles.chartLabel}>RANK</Text>
-      </View>
+      <Text style={styles.chartLabel}>RANK</Text>
+
       <View style={styles.ladder}>
         {TIER_ORDER.map((tier, i) => {
           const achieved = i <= bestIndex;
           const isBest = tier === bestTier;
           return (
-            <View key={tier} style={styles.rank}>
-              <View
-                style={[
-                  styles.tick,
-                  achieved && { backgroundColor: TIER_COLORS[tier] },
-                  isBest && styles.tickBest,
-                ]}
-              />
+            <View key={tier} style={styles.rankSlot}>
+              <View style={styles.blockWrapper}>
+                {achieved && (
+                  <View
+                    style={[
+                      styles.blockShadow,
+                      { backgroundColor: TIER_SHADOW_COLORS[tier], top: isBest ? 5 : 3 },
+                    ]}
+                  />
+                )}
+                <View
+                  style={[
+                    styles.block,
+                    isBest && styles.blockBest,
+                    achieved
+                      ? { backgroundColor: TIER_COLORS[tier], borderColor: COLORS.outline }
+                      : { backgroundColor: COLORS.surfaceAlt, borderColor: COLORS.inkFaint },
+                  ]}
+                />
+              </View>
               <Text
                 style={[
                   styles.rankLabel,
-                  achieved && { color: TIER_COLORS[tier] },
+                  achieved && { color: COLORS.ink },
                   isBest && styles.rankLabelBest,
                 ]}
                 numberOfLines={1}
@@ -64,52 +76,51 @@ export default function RarityMeter({ bestTier, progressPct }: Props) {
 }
 
 const styles = StyleSheet.create({
-  rarityMeter: { paddingHorizontal: 20, marginBottom: 16 },
-  chartLabelRow: { marginBottom: 6 },
+  rarityMeter: { paddingHorizontal: 20, marginBottom: 18 },
   chartLabel: {
-    color: COLORS.inkFaint,
-    fontFamily: FONTS.mono,
-    fontSize: 9,
+    color: COLORS.inkMuted,
+    fontFamily: FONTS.monoBold,
+    fontSize: 10,
     letterSpacing: 2,
+    marginBottom: 8,
   },
   ladder: {
     flexDirection: "row",
     alignItems: "flex-end",
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.hairline,
-    paddingBottom: 10,
-    marginBottom: 10,
+    marginBottom: 14,
   },
-  rank: { alignItems: "center", flex: 1 },
-  tick: {
-    width: 3,
+  rankSlot: { alignItems: "center", flex: 1, paddingHorizontal: 2 },
+  blockWrapper: { width: "100%", height: 22, position: "relative", marginBottom: 6 },
+  blockShadow: { position: "absolute", left: 0, right: 0, bottom: 0, height: 14, borderRadius: 5 },
+  block: {
     height: 14,
-    borderRadius: 1,
-    backgroundColor: COLORS.hairline,
-    marginBottom: 6,
+    borderRadius: 5,
+    borderWidth: 2,
   },
-  tickBest: { height: 20, width: 4 },
+  blockBest: { height: 18, borderRadius: 6 },
   rankLabel: {
     color: COLORS.inkFaint,
     fontFamily: FONTS.mono,
     fontSize: 8,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
-  rankLabelBest: { fontFamily: FONTS.monoBold },
+  rankLabelBest: { fontFamily: FONTS.monoBold, fontSize: 8.5 },
   progressRow: { alignItems: "center" },
   progressTrack: {
     width: "100%",
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.paperPanelRaised,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: COLORS.outline,
+    backgroundColor: COLORS.surfaceAlt,
     overflow: "hidden",
   },
-  progressFill: { height: "100%", backgroundColor: COLORS.waxSeal, borderRadius: 2 },
+  progressFill: { height: "100%", backgroundColor: COLORS.primary },
   progressLabel: {
     color: COLORS.inkMuted,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.monoBold,
     fontSize: 10,
-    marginTop: 6,
+    marginTop: 8,
     letterSpacing: 0.5,
   },
 });

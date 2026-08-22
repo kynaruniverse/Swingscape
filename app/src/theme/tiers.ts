@@ -1,17 +1,28 @@
 import { Tier } from "../logic/wordStore";
 
-// Reads as a hand-inked classification scale rather than a color-picker
-// gradient: graphite pencil at the low end, warming toward a deep
-// burnt-copper as rarity climbs. Values are darkened relative to a
-// dark-mode version of this scale — on cream paper, light/pastel tones
-// wash out, so every tier color needs to carry its own contrast.
+// A bold, escalating earthy palette — dusty and calm at the common
+// end, warming through amber/rust, then breaking into deep forest and
+// finally a vivid plum at the rarest tier so "niche" reads as a real
+// payoff, not just another swatch in a gradient.
 export const TIER_COLORS: Record<Tier, string> = {
-  common: "#5c584c",
-  familiar: "#4f6b3f",
-  uncommon: "#3d6684",
-  rare: "#6a4f92",
-  obscure: "#8a3f5c",
-  niche: "#b06a1e",
+  common: "#8a9a6b",
+  familiar: "#d1a237",
+  uncommon: "#e2822f",
+  rare: "#d94f2b",
+  obscure: "#2f8f6b",
+  niche: "#8b1e5c",
+};
+
+// Darker shade of each tier color, for the offset "shadow" block under
+// tier-colored chunky elements (badges, RarityMeter segments) — a true
+// 3D-extrusion look needs a shade of the *same* hue, not flat grey.
+export const TIER_SHADOW_COLORS: Record<Tier, string> = {
+  common: "#5f6c49",
+  familiar: "#9c7620",
+  uncommon: "#a85c1c",
+  rare: "#9c341a",
+  obscure: "#1f6349",
+  niche: "#5e1240",
 };
 
 export const TIER_LABELS: Record<Tier, string> = {

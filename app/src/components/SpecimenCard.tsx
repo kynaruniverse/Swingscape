@@ -1,8 +1,8 @@
 import React, { forwardRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { WordEntry } from "../logic/wordStore";
-import { TIER_COLORS, TIER_LABELS } from "../theme/tiers";
-import { COLORS, FONTS } from "../theme/appTheme";
+import { TIER_COLORS, TIER_SHADOW_COLORS, TIER_LABELS } from "../theme/tiers";
+import { COLORS, FONTS, DEPTH } from "../theme/appTheme";
 
 interface Props {
   entry: WordEntry;
@@ -10,30 +10,38 @@ interface Props {
   pairContext?: string;
 }
 
+const CARD_SIZE = 340;
+const FRAME_SHADOW_OFFSET = 6;
+
 // Rendered off-screen and captured via react-native-view-shot — this
 // is the actual image that gets shared, so it's laid out as a
-// standalone square card, not a fragment of the app's own screen chrome.
+// standalone card, not a fragment of the app's own screen chrome.
+// Uses the same thick-outline + offset-shadow language as GameCard
+// (not GameCard itself, since view-shot captures a plain View subtree
+// most reliably without nested absolute-positioned layers competing).
 const SpecimenCard = forwardRef<View, Props>(({ entry, catalogNumber, pairContext }, ref) => {
   const tierColor = TIER_COLORS[entry.tier];
+  const tierShadow = TIER_SHADOW_COLORS[entry.tier];
 
   return (
     <View ref={ref} style={styles.card} collapsable={false}>
       <Text style={styles.brand}>NICHE</Text>
       <Text style={styles.brandTagline}>A FIELD GUIDE TO RARE WORDS</Text>
 
-      <View style={[styles.frame, { borderColor: tierColor }]}>
-        <View style={[styles.cornerTag, { borderColor: tierColor }]}>
-          <Text style={[styles.cornerTagText, { color: tierColor }]}>
-            No. {catalogNumber ?? entry.rarity_score}
-          </Text>
+      <View style={styles.frameWrapper}>
+        <View style={[styles.frameShadow, { backgroundColor: tierShadow }]} />
+        <View style={[styles.frame, { borderColor: COLORS.outline }]}>
+          <View style={[styles.cornerTag, { backgroundColor: tierColor }]}>
+            <Text style={styles.cornerTagText}>No. {catalogNumber ?? entry.rarity_score}</Text>
+          </View>
+
+          <Text style={styles.word}>{entry.word.toUpperCase()}</Text>
+          <Text style={[styles.score, { color: tierColor }]}>{entry.rarity_score}</Text>
+          <Text style={[styles.tier, { color: tierColor }]}>{TIER_LABELS[entry.tier]}</Text>
+
+          {entry.definition && <Text style={styles.definition}>{entry.definition}</Text>}
+          {pairContext && <Text style={styles.pairContext}>found between {pairContext}</Text>}
         </View>
-
-        <Text style={styles.word}>{entry.word.toUpperCase()}</Text>
-        <Text style={[styles.score, { color: tierColor }]}>{entry.rarity_score}</Text>
-        <Text style={[styles.tier, { color: tierColor }]}>{TIER_LABELS[entry.tier]}</Text>
-
-        {entry.definition && <Text style={styles.definition}>{entry.definition}</Text>}
-        {pairContext && <Text style={styles.pairContext}>found between {pairContext}</Text>}
       </View>
     </View>
   );
@@ -41,55 +49,60 @@ const SpecimenCard = forwardRef<View, Props>(({ entry, catalogNumber, pairContex
 
 export default SpecimenCard;
 
-const CARD_SIZE = 340;
-
 const styles = StyleSheet.create({
   card: {
     width: CARD_SIZE,
     padding: 24,
-    backgroundColor: COLORS.paper,
+    backgroundColor: COLORS.bg,
     alignItems: "center",
   },
   brand: {
     color: COLORS.ink,
-    fontFamily: FONTS.monoBold,
-    fontSize: 15,
-    letterSpacing: 4,
+    fontFamily: FONTS.display,
+    fontSize: 20,
+    letterSpacing: 0.5,
   },
   brandTagline: {
     color: COLORS.inkFaint,
     fontFamily: FONTS.mono,
     fontSize: 9,
     letterSpacing: 1.5,
-    marginTop: 4,
+    marginTop: 2,
     marginBottom: 20,
+  },
+  frameWrapper: { width: "100%", position: "relative" },
+  frameShadow: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: FRAME_SHADOW_OFFSET,
+    borderRadius: DEPTH.radiusMd,
   },
   frame: {
     width: "100%",
-    borderWidth: 1.5,
-    borderRadius: 6,
+    borderWidth: DEPTH.borderWidth,
+    borderRadius: DEPTH.radiusMd,
     paddingVertical: 28,
     paddingHorizontal: 16,
     alignItems: "center",
-    backgroundColor: COLORS.paperPanel,
+    backgroundColor: COLORS.surface,
     position: "relative",
   },
   cornerTag: {
     position: "absolute",
-    top: -1,
+    top: -3,
     right: 16,
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
+    borderWidth: 2,
+    borderColor: COLORS.outline,
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    backgroundColor: COLORS.paper,
   },
-  cornerTagText: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.5 },
+  cornerTagText: { fontFamily: FONTS.monoBold, fontSize: 10, letterSpacing: 0.5, color: COLORS.cream },
   word: { color: COLORS.ink, fontSize: 30, fontFamily: FONTS.display, letterSpacing: 0.5 },
   score: { fontSize: 40, fontFamily: FONTS.monoBold, marginTop: 8 },
-  tier: { fontFamily: FONTS.mono, fontSize: 13, letterSpacing: 2, marginTop: 4 },
+  tier: { fontFamily: FONTS.monoBold, fontSize: 13, letterSpacing: 2, marginTop: 4 },
   definition: {
     color: COLORS.inkMuted,
     fontSize: 13,

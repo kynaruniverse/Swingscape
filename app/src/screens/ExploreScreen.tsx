@@ -12,17 +12,17 @@ import {
 import { WordStore } from "../logic/wordStore";
 import { Difficulty } from "../logic/pairGenerator";
 import { useNavigation } from "@react-navigation/native";
-import { TIER_COLORS, TIER_LABELS } from "../theme/tiers";
+import { TIER_COLORS, TIER_SHADOW_COLORS, TIER_LABELS } from "../theme/tiers";
 import { COLORS } from "../theme/appTheme";
 import TopBar from "../components/TopBar";
 import AnimatedResultCard from "../components/AnimatedResultCard";
 import FeedbackCard from "../components/FeedbackCard";
 import RarityMeter from "../components/RarityMeter";
-import FieldNotesCard from "../components/FieldNotesCard";
 import SpecimenCard from "../components/SpecimenCard";
+import GameButton from "../components/GameButton";
+import GameCard from "../components/GameCard";
 import { shareSpecimenCard } from "../logic/shareSpecimen";
 import { useExploreRound } from "../hooks/useExploreRound";
-import PaperTexture from "../components/PaperTexture";
 import styles from "./ExploreScreen.styles";
 
 interface Props {
@@ -55,12 +55,11 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   if (!state) {
     return (
       <SafeAreaView style={styles.container}>
-        <PaperTexture />
         <TopBar eyebrow="EXPLORE" />
-        <Text style={styles.errorText}>Couldn't generate a pair. Try again.</Text>
-        <TouchableOpacity style={styles.button} onPress={handleNewPair}>
-          <Text style={styles.buttonText}>Retry</Text>
-        </TouchableOpacity>
+        <View style={{ padding: 20 }}>
+          <Text style={styles.errorText}>Couldn't generate a pair. Try again.</Text>
+          <GameButton label="RETRY" onPress={handleNewPair} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -68,28 +67,40 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   if (roundOver) {
     return (
       <SafeAreaView style={styles.container}>
-        <PaperTexture />
         <TopBar eyebrow="EXPLORE" />
         <View style={styles.endScreen}>
           <Text style={styles.endHeading}>ROUND COMPLETE</Text>
 
           {best ? (
             <>
-              <Text style={styles.endBestLabel}>BEST FIND</Text>
-              <Text style={styles.endBestWord}>{best.word.toUpperCase()}</Text>
-              <Text style={[styles.endBestScore, { color: TIER_COLORS[best.tier] }]}>
-                {best.rarity_score}
-              </Text>
-              <Text style={styles.endBestTier}>{TIER_LABELS[best.tier]}</Text>
-              {madeCollection && (
-                <Text style={styles.endCollectionBadge}>NEW COLLECTION ENTRY</Text>
-              )}
-              <TouchableOpacity
-                style={styles.shareButton}
-                onPress={() => shareSpecimenCard(specimenRef)}
+              <GameCard
+                borderColor={TIER_COLORS[best.tier]}
+                shadowColor={TIER_SHADOW_COLORS[best.tier]}
+                style={styles.endBestCardInner}
               >
-                <Text style={styles.shareButtonText}>SHARE FIND</Text>
-              </TouchableOpacity>
+                <Text style={styles.endBestLabel}>BEST FIND</Text>
+                <Text style={styles.endBestWord}>{best.word.toUpperCase()}</Text>
+                <Text style={[styles.endBestScore, { color: TIER_COLORS[best.tier] }]}>
+                  {best.rarity_score}
+                </Text>
+                <Text style={[styles.endBestTier, { color: TIER_COLORS[best.tier] }]}>
+                  {TIER_LABELS[best.tier]}
+                </Text>
+              </GameCard>
+
+              {madeCollection && (
+                <Text style={styles.endCollectionBadge}>★ NEW COLLECTION ENTRY</Text>
+              )}
+
+              <GameButton
+                label="SHARE FIND"
+                onPress={() => shareSpecimenCard(specimenRef)}
+                color={COLORS.surface}
+                shadowColor={COLORS.inkFaint}
+                textColor={COLORS.ink}
+                small
+                style={{ marginTop: 16 }}
+              />
 
               {/* Rendered off-screen (not display:none — captureRef needs an
                   actually-laid-out view) purely so it can be screenshotted
@@ -119,16 +130,15 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
             )}
           </View>
 
-          <TouchableOpacity style={styles.newPairButton} onPress={handleNewPair}>
-            <Text style={styles.newPairButtonText}>PLAY AGAIN</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.collectionLinkButton}
+          <GameButton label="PLAY AGAIN" onPress={handleNewPair} style={{ marginTop: 24 }} />
+          <GameButton
+            label="WORD CABINET"
             onPress={() => navigation.navigate("Collection")}
-          >
-            <Text style={styles.collectionLinkText}>WORD CABINET</Text>
-          </TouchableOpacity>
+            color={COLORS.secondary}
+            shadowColor={COLORS.secondaryShadow}
+            small
+            style={{ marginTop: 12 }}
+          />
         </View>
       </SafeAreaView>
     );
@@ -137,35 +147,40 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <SafeAreaView style={styles.container}>
-        <PaperTexture />
         <TopBar eyebrow="EXPLORE" />
 
-        <View style={styles.pairContainer}>
-          <Text style={styles.bookend}>{state.pair.wordA.toUpperCase()}</Text>
-          <Text style={styles.arrow}>—</Text>
-          <Text style={styles.bookend}>{state.pair.wordB.toUpperCase()}</Text>
-        </View>
-        <Text style={styles.attemptsLeft}>
-          {state.maxAttempts - state.attemptsUsed} GUESSES LEFT
-        </Text>
+        <GameCard style={styles.pairCard}>
+          <View style={styles.pairRow}>
+            <Text style={styles.bookend}>{state.pair.wordA.toUpperCase()}</Text>
+            <View style={styles.arrowPill}>
+              <Text style={styles.arrow}>→</Text>
+            </View>
+            <Text style={styles.bookend}>{state.pair.wordB.toUpperCase()}</Text>
+          </View>
+        </GameCard>
 
-        <View style={styles.hintRow}>
-          {hint && <Text style={styles.hintText}>{hint}</Text>}
+        <View style={styles.attemptsRow}>
+          <Text style={styles.attemptsLeft}>{state.maxAttempts - state.attemptsUsed} GUESSES LEFT</Text>
           {hintAvailable && (
             <TouchableOpacity onPress={handleHint} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.hintButtonText}>{hint ? "REVEAL ANOTHER LETTER" : "NEED A HINT? (−1 GUESS)"}</Text>
+              <Text style={styles.hintButtonText}>{hint ? "REVEAL ANOTHER LETTER" : "HINT (−1 GUESS)"}</Text>
             </TouchableOpacity>
           )}
         </View>
+        {hint && <Text style={styles.hintText}>{hint}</Text>}
 
         {best ? (
-          <View style={[styles.bestPanel, { borderColor: TIER_COLORS[best.tier] }]}>
+          <GameCard
+            borderColor={TIER_COLORS[best.tier]}
+            shadowColor={TIER_SHADOW_COLORS[best.tier]}
+            style={styles.bestPanelInner}
+          >
             <Text style={styles.bestPanelLabel}>YOUR BEST</Text>
             <Text style={[styles.bestPanelScore, { color: TIER_COLORS[best.tier] }]}>
               {best.rarity_score} · {TIER_LABELS[best.tier]}
             </Text>
             <Text style={styles.bestPanelWord}>{best.word.toUpperCase()}</Text>
-          </View>
+          </GameCard>
         ) : (
           <View style={styles.bestPanelEmpty}>
             <Text style={styles.bestPanelLabel}>YOUR BEST</Text>
@@ -187,9 +202,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
             autoCorrect={false}
             returnKeyType="done"
           />
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Go</Text>
-          </TouchableOpacity>
+          <GameButton label="GO" onPress={handleSubmit} small style={styles.goButton} />
         </View>
 
         {feedback && (
@@ -207,7 +220,9 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
         {collectionToast && <Text style={styles.collectionToast}>{collectionToast}</Text>}
 
         {finds.length === 0 ? (
-          <FieldNotesCard />
+          <Text style={styles.tip}>
+            Type a word that fits alphabetically between the pair above — rarer words score higher.
+          </Text>
         ) : (
           <FlatList
             style={styles.findsList}
@@ -215,6 +230,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
             keyExtractor={(item) => item.word}
             renderItem={({ item }) => (
               <View style={styles.findRow}>
+                <View style={[styles.findDot, { backgroundColor: TIER_COLORS[item.tier] }]} />
                 <Text style={styles.findWord}>{item.word}</Text>
                 <Text style={[styles.findTier, { color: TIER_COLORS[item.tier] }]}>
                   {item.tier} · {item.rarity_score}
@@ -224,9 +240,13 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
           />
         )}
 
-        <TouchableOpacity style={styles.newPairButton} onPress={handleNewPair}>
-          <Text style={styles.newPairButtonText}>New Pair</Text>
-        </TouchableOpacity>
+        <GameButton
+          label="NEW PAIR"
+          onPress={handleNewPair}
+          color={COLORS.secondary}
+          shadowColor={COLORS.secondaryShadow}
+          style={styles.newPairButton}
+        />
       </SafeAreaView>
     </KeyboardAvoidingView>
   );

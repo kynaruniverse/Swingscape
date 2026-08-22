@@ -90,7 +90,7 @@ const stampStyles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 2,
-    backgroundColor: COLORS.paper,
+    backgroundColor: COLORS.bg,
     alignItems: "center",
     justifyContent: "center",
   },

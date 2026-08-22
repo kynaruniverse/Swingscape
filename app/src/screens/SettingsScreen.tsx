@@ -41,7 +41,7 @@ export default function SettingsScreen() {
               </Text>
               <Text style={styles.optionHint}>{d.hint}</Text>
             </View>
-            {active && <Ionicons name="checkmark" size={18} color={COLORS.waxSeal} />}
+            {active && <Ionicons name="checkmark" size={18} color={COLORS.primary} />}
           </TouchableOpacity>
         );
       })}
@@ -54,7 +54,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.paper },
+  container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -62,14 +62,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 10,
-    backgroundColor: COLORS.paperPanel,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.hairline,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 3,
+    borderBottomColor: COLORS.outline,
   },
-  title: { color: COLORS.ink, fontFamily: FONTS.monoBold, fontSize: 14, letterSpacing: 2 },
+  title: { color: COLORS.ink, fontFamily: FONTS.display, fontSize: 16, letterSpacing: 1 },
   sectionLabel: {
     color: COLORS.inkFaint,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.monoBold,
     fontSize: 11,
     letterSpacing: 1.5,
     marginTop: 24,
@@ -81,17 +81,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 12,
     padding: 14,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.hairline,
-    backgroundColor: COLORS.paperPanel,
+    borderRadius: 14,
+    borderWidth: 3,
+    borderColor: COLORS.outline,
+    backgroundColor: COLORS.surface,
   },
-  optionActive: { borderColor: COLORS.waxSeal, backgroundColor: COLORS.paperPanelHighlight },
+  optionActive: { borderColor: COLORS.primary, backgroundColor: COLORS.surfaceAlt },
   optionText: { flex: 1 },
   optionLabel: { color: COLORS.ink, fontFamily: FONTS.monoBold, fontSize: 13, letterSpacing: 1 },
-  optionLabelActive: { color: COLORS.waxSeal },
+  optionLabelActive: { color: COLORS.primary },
   optionHint: { color: COLORS.inkMuted, fontSize: 12, marginTop: 3 },
   footer: { marginTop: "auto", alignItems: "center", paddingVertical: 24 },
   footerText: { color: COLORS.inkFaint, fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 1 },
