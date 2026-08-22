@@ -9,8 +9,12 @@ import {
   bestFind,
   percentOfBest,
   isRoundOver,
+  useHint as applyHint,
+  hintDisplay,
+  canTakeHint,
 } from "../logic/roundState";
 import { maybeAddToCollection, COLLECTION_MIN_RARITY } from "../logic/collectionStore";
+import { recordDiscovery } from "../logic/catalogStore";
 import { FeedbackState } from "../components/FeedbackCard";
 
 function newState(store: WordStore, difficulty: Difficulty): RoundState | null {
@@ -65,11 +69,17 @@ export function useExploreRound(store: WordStore, difficulty: Difficulty = "medi
             setCollectionToast(`Added to collection: "${result.entry.word}"`);
           }
         });
+        recordDiscovery(result.entry.word);
         break;
       }
     }
     setInput("");
   }, [state, input, store]);
+
+  const handleHint = useCallback(() => {
+    if (!state) return;
+    setState(applyHint(state));
+  }, [state]);
 
   const best = state ? bestFind(state) : null;
   const roundOver = state ? isRoundOver(state) : false;
@@ -78,6 +88,8 @@ export function useExploreRound(store: WordStore, difficulty: Difficulty = "medi
     ? Math.min(100, Math.round(percentOfBest(state) * 100))
     : undefined;
   const madeCollection = !!best && best.rarity_score >= COLLECTION_MIN_RARITY;
+  const hint = state ? hintDisplay(state) : undefined;
+  const hintAvailable = state ? canTakeHint(state) : false;
 
   return {
     state,
@@ -88,6 +100,9 @@ export function useExploreRound(store: WordStore, difficulty: Difficulty = "medi
     resultKey,
     handleSubmit,
     handleNewPair,
+    handleHint,
+    hint,
+    hintAvailable,
     best,
     roundOver,
     finds,

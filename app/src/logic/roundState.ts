@@ -14,6 +14,10 @@ export interface RoundState {
   finds: Record<string, WordEntry>; // word -> entry, insertion order not guaranteed
   attemptsUsed: number;
   maxAttempts: number;
+  // How many leading letters of pair.bestPossible.word have been
+  // revealed via the Hint button. Never reaches the word's full length
+  // — a hint should nudge, not solve.
+  hintLettersRevealed: number;
 }
 
 export type GuessResult =
@@ -32,7 +36,7 @@ export function createRoundState(
   pair: WordPair,
   maxAttempts: number = DEFAULT_MAX_ATTEMPTS
 ): RoundState {
-  return { pair, finds: {}, attemptsUsed: 0, maxAttempts };
+  return { pair, finds: {}, attemptsUsed: 0, maxAttempts, hintLettersRevealed: 0 };
 }
 
 export function allFinds(state: RoundState): WordEntry[] {
@@ -95,4 +99,41 @@ export function submitGuess(
     result: { status: "success", entry, isNewBest },
     nextState,
   };
+}
+
+/**
+ * Spends one attempt to reveal one more leading letter of the best
+ * obtainable word in this gap. Returns the same state (no-op) if the
+ * round is already over, there's no known best-possible word, or the
+ * hint would reveal the entire word — a hint should never hand over
+ * the full answer for free.
+ */
+export function useHint(state: RoundState): RoundState {
+  const target = state.pair.bestPossible?.word;
+  if (!target || isRoundOver(state)) return state;
+  if (state.hintLettersRevealed >= target.length - 1) return state;
+
+  return {
+    ...state,
+    hintLettersRevealed: state.hintLettersRevealed + 1,
+    attemptsUsed: state.attemptsUsed + 1,
+  };
+}
+
+/** "e n _ _ _"-style display string for the currently revealed hint, or undefined if no hint taken yet. */
+export function hintDisplay(state: RoundState): string | undefined {
+  const target = state.pair.bestPossible?.word;
+  if (!target || state.hintLettersRevealed === 0) return undefined;
+
+  return target
+    .split("")
+    .map((ch, i) => (i < state.hintLettersRevealed ? ch.toUpperCase() : "_"))
+    .join(" ");
+}
+
+/** Whether a hint is still available to take (round active, word known, not fully revealed). */
+export function canTakeHint(state: RoundState): boolean {
+  const target = state.pair.bestPossible?.word;
+  if (!target || isRoundOver(state)) return false;
+  return state.hintLettersRevealed < target.length - 1;
 }

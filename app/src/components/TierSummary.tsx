@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 12,
     borderRadius: 4,
-    backgroundColor: COLORS.vellumPanel,
+    backgroundColor: COLORS.paperPanel,
     borderWidth: 1,
     borderColor: COLORS.hairline,
   },
@@ -39,5 +39,5 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   tierSummaryLabel: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.5 },
-  tierSummaryCount: { color: COLORS.parchmentMuted, fontFamily: FONTS.monoBold, fontSize: 12 },
+  tierSummaryCount: { color: COLORS.inkMuted, fontFamily: FONTS.monoBold, fontSize: 12 },
 });

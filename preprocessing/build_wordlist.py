@@ -63,15 +63,24 @@ def rarity_score(zipf: float) -> int:
 
 
 def tier_for_zipf(zipf: float) -> str:
-    if zipf >= 5.5:
-        return "common"
+    # Cutoffs are set from the actual zipf distribution of this word
+    # list (a British dictionary, not a curated frequency list), not
+    # round numbers on the theoretical 0-8 zipf scale. A large
+    # dictionary skews low — most entries are words nobody says out
+    # loud — so fixed "textbook" cutoffs dumped ~85% of words into
+    # rare/obscure/niche. These percentile-derived cutoffs instead aim
+    # for roughly: common ~3%, familiar ~12%, uncommon ~20%,
+    # rare ~30%, obscure ~25%, niche ~10% of the list. Re-derive if
+    # the source word list changes meaningfully.
     if zipf >= 4.5:
-        return "familiar"
+        return "common"
     if zipf >= 3.5:
+        return "familiar"
+    if zipf >= 2.7:
         return "uncommon"
-    if zipf >= 2.5:
+    if zipf >= 1.9:
         return "rare"
-    if zipf >= 1.5:
+    if zipf >= 1.3:
         return "obscure"
     return "niche"
 

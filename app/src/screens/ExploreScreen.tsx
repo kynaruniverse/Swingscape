@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,10 @@ import AnimatedResultCard from "../components/AnimatedResultCard";
 import FeedbackCard from "../components/FeedbackCard";
 import RarityMeter from "../components/RarityMeter";
 import FieldNotesCard from "../components/FieldNotesCard";
+import SpecimenCard from "../components/SpecimenCard";
+import { shareSpecimenCard } from "../logic/shareSpecimen";
 import { useExploreRound } from "../hooks/useExploreRound";
+import PaperTexture from "../components/PaperTexture";
 import styles from "./ExploreScreen.styles";
 
 interface Props {
@@ -29,6 +32,7 @@ interface Props {
 
 export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   const navigation = useNavigation<any>();
+  const specimenRef = useRef<View>(null);
   const {
     state,
     input,
@@ -38,6 +42,9 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
     resultKey,
     handleSubmit,
     handleNewPair,
+    handleHint,
+    hint,
+    hintAvailable,
     best,
     roundOver,
     finds,
@@ -48,6 +55,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   if (!state) {
     return (
       <SafeAreaView style={styles.container}>
+        <PaperTexture />
         <TopBar eyebrow="EXPLORE" />
         <Text style={styles.errorText}>Couldn't generate a pair. Try again.</Text>
         <TouchableOpacity style={styles.button} onPress={handleNewPair}>
@@ -60,6 +68,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   if (roundOver) {
     return (
       <SafeAreaView style={styles.container}>
+        <PaperTexture />
         <TopBar eyebrow="EXPLORE" />
         <View style={styles.endScreen}>
           <Text style={styles.endHeading}>ROUND COMPLETE</Text>
@@ -75,6 +84,23 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
               {madeCollection && (
                 <Text style={styles.endCollectionBadge}>NEW COLLECTION ENTRY</Text>
               )}
+              <TouchableOpacity
+                style={styles.shareButton}
+                onPress={() => shareSpecimenCard(specimenRef)}
+              >
+                <Text style={styles.shareButtonText}>SHARE FIND</Text>
+              </TouchableOpacity>
+
+              {/* Rendered off-screen (not display:none — captureRef needs an
+                  actually-laid-out view) purely so it can be screenshotted
+                  by the Share button above; never visible to the player. */}
+              <View style={styles.offscreenCapture} pointerEvents="none">
+                <SpecimenCard
+                  ref={specimenRef}
+                  entry={best}
+                  pairContext={`${state.pair.wordA} – ${state.pair.wordB}`}
+                />
+              </View>
             </>
           ) : (
             <Text style={styles.endBestTier}>No finds this round</Text>
@@ -111,6 +137,7 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <SafeAreaView style={styles.container}>
+        <PaperTexture />
         <TopBar eyebrow="EXPLORE" />
 
         <View style={styles.pairContainer}>
@@ -121,6 +148,15 @@ export default function ExploreScreen({ store, difficulty = "medium" }: Props) {
         <Text style={styles.attemptsLeft}>
           {state.maxAttempts - state.attemptsUsed} GUESSES LEFT
         </Text>
+
+        <View style={styles.hintRow}>
+          {hint && <Text style={styles.hintText}>{hint}</Text>}
+          {hintAvailable && (
+            <TouchableOpacity onPress={handleHint} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.hintButtonText}>{hint ? "REVEAL ANOTHER LETTER" : "NEED A HINT? (−1 GUESS)"}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {best ? (
           <View style={[styles.bestPanel, { borderColor: TIER_COLORS[best.tier] }]}>

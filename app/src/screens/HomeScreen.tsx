@@ -3,17 +3,28 @@ import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from "react-na
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { loadCollection } from "../logic/collectionStore";
+import { getStreak } from "../logic/dailyStore";
+import { getCatalogTotal } from "../logic/catalogStore";
+import PaperTexture from "../components/PaperTexture";
 import { COLORS, FONTS } from "../theme/appTheme";
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const [discoveryCount, setDiscoveryCount] = useState<number | null>(null);
+  const [streakCount, setStreakCount] = useState<number>(0);
+  const [catalogTotal, setCatalogTotal] = useState<number | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
       let cancelled = false;
       loadCollection().then((c) => {
         if (!cancelled) setDiscoveryCount(c.length);
+      });
+      getStreak().then((s) => {
+        if (!cancelled) setStreakCount(s.current);
+      });
+      getCatalogTotal().then((n) => {
+        if (!cancelled) setCatalogTotal(n);
       });
       return () => {
         cancelled = true;
@@ -23,6 +34,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <PaperTexture />
       <TouchableOpacity
         style={styles.settingsButton}
         onPress={() => navigation.navigate("Settings")}
@@ -34,12 +46,24 @@ export default function HomeScreen() {
       <View style={styles.center}>
         <Text style={styles.wordmark}>NICHE</Text>
         <Text style={styles.tagline}>a field guide to rare words</Text>
+        {!!catalogTotal && (
+          <Text style={styles.catalogText}>SPECIMEN NO. {catalogTotal} CATALOGUED</Text>
+        )}
 
         <TouchableOpacity
           style={styles.playButton}
           onPress={() => navigation.navigate("Game", { screen: "Explore" })}
         >
           <Text style={styles.playButtonText}>PLAY</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.cabinetLink}
+          onPress={() => navigation.navigate("Game", { screen: "Daily" })}
+        >
+          <Text style={styles.cabinetLinkText}>
+            {streakCount > 0 ? `DAILY DUEL · ${streakCount} DAY STREAK` : "DAILY DUEL"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -73,7 +97,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1,
     marginTop: 8,
-    marginBottom: 44,
+    marginBottom: 12,
+  },
+  catalogText: {
+    color: COLORS.waxSealMuted,
+    fontFamily: FONTS.mono,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    marginBottom: 32,
   },
   playButton: {
     backgroundColor: COLORS.waxSeal,

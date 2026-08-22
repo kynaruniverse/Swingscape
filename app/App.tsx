@@ -11,6 +11,7 @@ import { JetBrainsMono_500Medium, JetBrainsMono_700Bold } from "@expo-google-fon
 import { WordStore, WordEntry } from "./src/logic/wordStore";
 import HomeScreen from "./src/screens/HomeScreen";
 import ExploreScreen from "./src/screens/ExploreScreen";
+import DailyScreen from "./src/screens/DailyScreen";
 import CollectionScreen from "./src/screens/CollectionScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import { DifficultyProvider, useDifficulty } from "./src/state/DifficultyContext";
@@ -47,6 +48,16 @@ function GameTabs({ store }: { store: WordStore }) {
         }}
       >
         {() => <ExploreScreen store={store} difficulty={difficulty} />}
+      </Tab.Screen>
+      <Tab.Screen
+        name="Daily"
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" size={size} color={color} />
+          ),
+        }}
+      >
+        {() => <DailyScreen store={store} />}
       </Tab.Screen>
       <Tab.Screen
         name="Collection"

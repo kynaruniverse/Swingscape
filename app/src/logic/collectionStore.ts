@@ -14,7 +14,7 @@ const STORAGE_KEY = "niche:collection:v1";
 // Only finds at or above this rarity are worth saving — otherwise
 // every session's Common/Familiar guesses would clutter the collection
 // with words nobody's proud of finding.
-export const COLLECTION_MIN_RARITY = 550; // roughly "rare" tier and up
+export const COLLECTION_MIN_RARITY = 664; // "rare" tier and up (matches tier_for_zipf's cutoff)
 
 export interface CollectionEntry extends WordEntry {
   foundAt: string; // ISO date string

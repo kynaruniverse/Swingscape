@@ -5,7 +5,8 @@ import { TIER_COLORS, TIER_LABELS, TIER_ORDER } from "../theme/tiers";
 import { COLORS, FONTS } from "../theme/appTheme";
 
 interface Props {
-  bestTier: Tier;
+  // Undefined until the player's first find of the round.
+  bestTier?: Tier;
   // Omit to hide the progress row entirely (e.g. when the pair has no
   // known ceiling to measure progress against).
   progressPct?: number;
@@ -15,7 +16,7 @@ interface Props {
 // marks, the achieved rank picked out in its tier color and the rest
 // left as quiet, unfilled ticks — rather than a flat row of dots.
 export default function RarityMeter({ bestTier, progressPct }: Props) {
-  const bestIndex = TIER_ORDER.indexOf(bestTier);
+  const bestIndex = bestTier ? TIER_ORDER.indexOf(bestTier) : -1;
 
   return (
     <View style={styles.rarityMeter}>
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
   rarityMeter: { paddingHorizontal: 20, marginBottom: 16 },
   chartLabelRow: { marginBottom: 6 },
   chartLabel: {
-    color: COLORS.parchmentFaint,
+    color: COLORS.inkFaint,
     fontFamily: FONTS.mono,
     fontSize: 9,
     letterSpacing: 2,
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
   },
   tickBest: { height: 20, width: 4 },
   rankLabel: {
-    color: COLORS.parchmentFaint,
+    color: COLORS.inkFaint,
     fontFamily: FONTS.mono,
     fontSize: 8,
     letterSpacing: 0.5,
@@ -100,12 +101,12 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 4,
     borderRadius: 2,
-    backgroundColor: COLORS.vellumPanelRaised,
+    backgroundColor: COLORS.paperPanelRaised,
     overflow: "hidden",
   },
   progressFill: { height: "100%", backgroundColor: COLORS.waxSeal, borderRadius: 2 },
   progressLabel: {
-    color: COLORS.parchmentMuted,
+    color: COLORS.inkMuted,
     fontFamily: FONTS.mono,
     fontSize: 10,
     marginTop: 6,

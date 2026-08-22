@@ -51,7 +51,7 @@ export default function CollectionCard({ entry }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.vellumPanel,
+    backgroundColor: COLORS.paperPanel,
     borderRadius: 4,
     padding: 14,
     marginTop: 10,
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
     position: "relative",
   },
-  cardProminent: { backgroundColor: "#241d1a", borderWidth: 1.5 },
+  cardProminent: { backgroundColor: COLORS.paperPanelHighlight, borderWidth: 1.5 },
   cornerTag: {
     position: "absolute",
     top: -1,
@@ -70,21 +70,21 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 3,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    backgroundColor: COLORS.ledgerInk,
+    backgroundColor: COLORS.paper,
   },
   cornerTagText: { fontFamily: FONTS.mono, fontSize: 9, letterSpacing: 0.5 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  word: { color: COLORS.parchment, fontSize: 17, fontFamily: FONTS.monoBold, letterSpacing: 0.5 },
+  word: { color: COLORS.ink, fontSize: 17, fontFamily: FONTS.monoBold, letterSpacing: 0.5 },
   tierBadge: { borderWidth: 1, borderRadius: 3, paddingHorizontal: 10, paddingVertical: 3 },
   tierText: { fontFamily: FONTS.mono, fontSize: 10, letterSpacing: 0.5 },
-  score: { color: COLORS.parchmentMuted, fontSize: 22, fontFamily: FONTS.display, marginTop: 6 },
-  meta: { color: COLORS.parchmentMuted, fontSize: 13, marginTop: 6 },
+  score: { color: COLORS.inkMuted, fontSize: 22, fontFamily: FONTS.display, marginTop: 6 },
+  meta: { color: COLORS.inkMuted, fontSize: 13, marginTop: 6 },
   definition: {
-    color: COLORS.parchmentMuted,
+    color: COLORS.inkMuted,
     fontSize: 13,
     marginTop: 6,
     lineHeight: 18,
     fontStyle: "italic",
   },
-  date: { color: COLORS.parchmentFaint, fontSize: 12, marginTop: 4 },
+  date: { color: COLORS.inkFaint, fontSize: 12, marginTop: 4 },
 });

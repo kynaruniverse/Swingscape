@@ -28,7 +28,10 @@ const GAP_RANGES: Record<Difficulty, GapRange> = {
 // Every generated pair must contain at least one obtainable word at or
 // above this rarity score, so a player always has *something* worth
 // finding — no pair should be a guaranteed dead end.
-const MIN_GUARANTEED_RARITY = 400;
+// 439 is the floor of the "familiar" tier under the current word list's
+// rarity scale — keep this in sync with tier_for_zipf in build_wordlist.py
+// if the source word list or its tier cutoffs ever change.
+const MIN_GUARANTEED_RARITY = 439;
 
 // Bookends are picked from words at or above this tier so the pair is
 // always easy to read/say, even on Hard, where the *gap* is the hard part.
@@ -42,8 +45,8 @@ export interface WordPair {
   bestPossible: WordEntry | undefined;
 }
 
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function randomInt(min: number, max: number, rng: () => number): number {
+  return Math.floor(rng() * (max - min + 1)) + min;
 }
 
 /**
@@ -69,7 +72,11 @@ function isTrivialPair(wordA: string, wordB: string): boolean {
 export function generatePair(
   store: WordStore,
   difficulty: Difficulty,
-  maxAttempts = 200
+  maxAttempts = 200,
+  // Defaults to Math.random for normal (Explore) play. Daily Duel passes
+  // a seeded RNG here instead, so every player gets the identical pair
+  // for a given date without needing a backend to distribute it.
+  rng: () => number = Math.random
 ): WordPair | null {
   const { minEntries, maxEntries } = GAP_RANGES[difficulty];
 
@@ -83,7 +90,7 @@ export function generatePair(
   if (bookendCandidates.length < 2) return null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const startPos = randomInt(0, bookendCandidates.length - 2);
+    const startPos = randomInt(0, bookendCandidates.length - 2, rng);
     const startIdx = bookendCandidates[startPos];
     const wordA = store.get(startIdx).word;
 
